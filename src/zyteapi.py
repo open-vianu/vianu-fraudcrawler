@@ -5,8 +5,6 @@ import logging
 import aiohttp
 from requests.auth import HTTPBasicAuth
 
-from src.settings import REQUESTS_TIMEOUT
-
 logger = logging.getLogger(__name__)
 
 
@@ -25,7 +23,6 @@ class ZyteAPIClient:
         "actions": [],
         "product": True,
     }
-    _requests_timeout = REQUESTS_TIMEOUT
 
     def __init__(
         self,
