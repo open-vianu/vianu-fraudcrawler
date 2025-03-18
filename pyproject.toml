@@ -10,6 +10,7 @@ authors = [
 license = "MIT License"
 readme = "README.md"
 repository = "https://github/open-vianu/vianu-fraudcrawler"
+package-mode = false
 
 [tool.poetry.group.dev.dependencies]
 pytest-cov = "^6.0.0"
