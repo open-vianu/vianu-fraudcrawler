@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "vianu-fraudcrawler"
+version = "0.1.0"
+description = "Intelligent Market Monitoring"
+authors = [
+    "chriguBERTO <christoph@vianu.ch>",
+    "alho94 <alexander@vianu.ch>",
+    "nicoapg <nicolas@vianu.ch>"
+]
+license = "MIT License"
+readme = "README.md"
+repository = "https://github/open-vianu/vianu-fraudcrawler"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.bandit]
+exclude_dirs = [
+    "./.venv",
+    "./.git",
+    "./.vscode",
+    "./.ruff_cache"
+]
