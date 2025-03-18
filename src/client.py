@@ -2,7 +2,7 @@ import logging
 
 import pandas as pd
 
-from src.serpapi import SerpApiClient
+from src.search import SerpApi
 # from src.zyteapi import ZyteAPIClient
 # from src.processor import Processor
 # from src.enrichment import KeywordEnricher
@@ -31,7 +31,7 @@ class FraudCrawlerClient:
             retry_delay: Delay between retries in seconds (default: 2).
 
         """
-        self._serpapi_client = SerpApiClient(api_key=serpapi_key, location=location)
+        self._serpapi_client = SerpApi(api_key=serpapi_key, location=location)
         self._zyteapi_client = ZyteAPIClient(
             api_key=zyteapi_key, max_retries=max_retries, retry_delay=retry_delay
         )

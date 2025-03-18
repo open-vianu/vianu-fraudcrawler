@@ -1,12 +1,12 @@
 import pytest
 
 from src.base import Setup
-from src.serpapi import SerpApiClient
+from src.search import SerpApi
 
 @pytest.fixture
 def serpapi_client():
     setup = Setup()
-    serpapi_client = SerpApiClient(api_key=setup.serpapi_key)
+    serpapi_client = SerpApi(api_key=setup.serpapi_key)
     return serpapi_client
 
 @pytest.mark.asyncio

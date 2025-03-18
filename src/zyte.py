@@ -8,7 +8,7 @@ from requests.auth import HTTPBasicAuth
 logger = logging.getLogger(__name__)
 
 
-class ZyteAPIClient:
+class ZyteApi:
     """A client to interact with the Zyte API for fetching product details."""
 
     _endpoint = "https://api.zyte.com/v1/extract"
