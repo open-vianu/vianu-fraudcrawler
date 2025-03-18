@@ -1,17 +1,8 @@
 from copy import deepcopy
 import logging
-import requests
-from typing import List
-import hashlib
-import time
-import re
-import json
-from typing import Any, Dict, Callable
-from serpapi.google_search import GoogleSearch
-from typing import Optional
-from requests import Response
-from urllib.parse import quote_plus
+from typing import List, Dict, Any, Callable
 
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -71,36 +62,6 @@ class SerpApiClient:
             logger.error(f"SERP API request failed with status code {status_code}.")
             return []
 
-    def _generate_hash(self, data: Any) -> str:
-        data_str = str(data)
-        return hashlib.sha256(data_str.encode("utf-8")).hexdigest()
-
-    def _mask_token_in_string(self, string_to_mask: str, token: str) -> str:
-        return re.sub(re.escape(token), f"{re.escape(token[:5])}*****", string_to_mask)
-
-    def convert_request_to_string(
-        self, req: requests.models.PreparedRequest, token_to_mask: Optional[str] = None
-    ) -> str:
-        result = f"method: {req.method}, url: {req.url}"
-        if req.body:
-            result += ", body: " + req.body
-        if not token_to_mask:
-            return result
-        return self._mask_token_in_string(result, quote_plus(token_to_mask))
-
-    def convert_response_to_string(
-        self, response: Response, token_to_mask: Optional[str] = None
-    ) -> str:
-        try:
-            # Attempt to get json formatted data from response and turn it to CloudWatch-friendly format
-            result = json.dumps(response.json())
-        except json.decoder.JSONDecodeError:
-            result = response.text
-
-        if not token_to_mask:
-            return result
-        return self._mask_token_in_string(result, token_to_mask)
-
     @staticmethod
     def _check_limit(urls: List[str], query: str, limit: int = 200) -> List[str]:
         """
@@ -119,24 +80,10 @@ class SerpApiClient:
             logger.warning(f"Reached limit for keyword: {query}")
         return urls
 
-    @staticmethod
-    def get_organic_results(results: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        Extracts the organic search results from the API response.
-
-        Args:
-            results (Dict[str, Any]): The JSON response from the API.
-
-        Returns:
-            List[Dict[str, Any]]: A list of organic search results.
-        """
-        return results.get("organic_results") or []
-
     def call_serpapi(
         self,
         params: Dict[str, Any],
         log_name: str,
-        force_refresh: bool = False,
         callback: Callable[int, None] | None = None,
     ) -> Dict[str, Any]:
         """
@@ -147,28 +94,21 @@ class SerpApiClient:
             log_name (str): The name used for logging.
             force_refresh (bool): Whether to bypass the cache and force a new API call (default is False).
 
-        Returns:
-            Dict[str, Any]: The JSON response from the SerpAPI.
-
         Raises:
             Exception: If all API call attempts fail.
         """
-
+        import time
         attempts = 0
         max_retries = 5
         retry_delay = 5
         while attempts < max_retries:
             try:
-                search = GoogleSearch(params)
-
-                response = search.get_response()
-
-                logger.debug(
-                    f'{log_name}: req: {self.convert_request_to_string(response.request, params.get("api_key"))}'
-                )
-                logger.debug(
-                    f"{log_name}: response: \n"
-                    + self.convert_response_to_string(response, params.get("api_key"))
+                # search = GoogleSearch(params)
+                # response = search.get_response()
+                response = requests.get(
+                    url=self._endpoint,
+                    params=params,
+                    timeout=self._requests_timeout,
                 )
                 response.raise_for_status()
                 if callback is not None:
