@@ -4,6 +4,8 @@ from typing import List, Dict, Any, Callable
 
 import requests
 
+from src.settings import REQUESTS_TIMEOUT
+
 logger = logging.getLogger(__name__)
 
 
@@ -12,7 +14,7 @@ class SerpApiClient:
 
     _endpoint = "https://serpapi.com/search"
     _engine = "google"
-    _requests_timeout = 10
+    _requests_timeout = REQUESTS_TIMEOUT
 
     def __init__(self, api_key: str, location: str = "Switzerland"):
         """Initializes the SerpApiClient with the given API key.
