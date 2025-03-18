@@ -11,6 +11,12 @@ license = "MIT License"
 readme = "README.md"
 repository = "https://github/open-vianu/vianu-fraudcrawler"
 
+[tool.poetry.group.dev.dependencies]
+pytest-cov = "^6.0.0"
+bandit = "^1.8.3"
+ruff = "^0.11.0"
+pytest = "^8.3.5"
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
@@ -20,7 +26,6 @@ python = "^3.11"
 requests = "^2.32.3"
 pandas = "^2.2.3"
 aiohttp = "^3.11.14"
-pytest = "^8.3.5"
 pydantic-settings = "^2.8.1"
 
 [tool.bandit]
