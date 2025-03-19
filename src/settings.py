@@ -4,7 +4,7 @@ LOG_LVL = "DEBUG"
 DATE_FMT = "%Y-%m-%d %H:%M:%S"
 RATE_LIMIT_MESSAGE = "rate limit exceeded"
 
-# Pipeline settings
+# Search settings
 ZYTE_PROBABILITY_THRESHOLD = 0.1
 MAX_RETRIES = 3
 RETRY_DELAY = 2

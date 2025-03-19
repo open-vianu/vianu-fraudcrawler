@@ -5,6 +5,8 @@ import logging
 import aiohttp
 from requests.auth import HTTPBasicAuth
 
+from src.settings import MAX_RETRIES, RETRY_DELAY
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,23 +29,20 @@ class ZyteApi:
     def __init__(
         self,
         api_key: str,
-        max_retries: int = 3,
-        retry_delay: int = 5,
-        async_limit_per_host: int = 5,
+        max_retries: int = MAX_RETRIES,
+        retry_delay: int = RETRY_DELAY,
     ):
         """Initializes the ZyteApiClient with the given API key and retry configurations.
 
         Args:
             api_key: The API key for Zyte API.
-            max_retries: Maximum number of retries for API calls (default: 3).
-            retry_delay: Delay between retries in seconds (default: 5).
-            async_limit_per_host: Maximum number of concurrent requests per host for async calls (default: 5).
+            max_retries: Maximum number of retries for API calls.
+            retry_delay: Delay between retries in seconds.
         """
         self._http_basic_auth = HTTPBasicAuth(api_key, "")
         self._aiohttp_basic_auth = aiohttp.BasicAuth(api_key)
         self._max_retries = max_retries
         self._retry_delay = retry_delay
-        self._async_limit_per_host = async_limit_per_host
 
     async def get_details(
         self, queue_in: asyncio.Queue, queue_out: asyncio.Queue
@@ -73,6 +72,7 @@ class ZyteApi:
         Args:
             url: The URL to fetch product details from.
         """
+        logger.info(f'Fetching product details by Zyte for URL {url}.')
         attempts = 0
         err = None
         while attempts < self._max_retries:
@@ -90,7 +90,6 @@ class ZyteApi:
                 err = e
             attempts += 1
             if attempts < self._max_retries:
-                logger.debug(f"Retrying in {self._retry_delay} seconds.")
                 await asyncio.sleep(self._retry_delay)
         if err is not None:
             raise err

@@ -1,11 +1,12 @@
+import asyncio
 from base64 import b64encode
-from copy import deepcopy
 import logging
 from pydantic import BaseModel
 from typing import List, Iterator
 
 import aiohttp
 
+from src.settings import MAX_RETRIES, RETRY_DELAY
 from src.settings import ENRICHMENT_UPPER_LIMIT
 
 logger = logging.getLogger(__name__)
@@ -46,108 +47,86 @@ class SerpApi(AsyncClient):
     _endpoint = "https://serpapi.com/search"
     _engine = "google"
 
-    def __init__(self, api_key: str, location: str = "Switzerland"):
+    def __init__(
+        self,
+        api_key: str,
+        max_retries: int = MAX_RETRIES,
+        retry_delay: int = RETRY_DELAY,
+    ):
         """Initializes the SerpApiClient with the given API key.
 
         Args:
             api_key: The API key for SerpApi.
-            location: The location to use for the search (default: "Switzerland").
+            max_retries: Maximum number of retries for API calls.
+            retry_delay: Delay between retries in seconds.
         """
         super().__init__()
         self._api_key = api_key
-        self._location = location
-        self._base_config = {
-            "engine": self._engine,
-            "api_key": api_key,
-            "location_requested": self._location,
-            "location_used": self._location,
-        }
+        self._max_retries = max_retries
+        self._retry_delay = retry_delay
 
-    async def search(self, search_term: str, num_results: int = 10) -> List[str]:
+    #     self._base_config = {
+    #         "engine": self._engine,
+    #         "api_key": api_key,
+    #         "location_requested": "Switzerland",
+    #         "location_used": "Switzerland",
+    #     }
+    # async def search(self, search_term: str, location: str, num_results: int) -> List[str]:
+    #     from copy import deepcopy
+    #     # Setup the parameters
+    #     params = deepcopy(self._base_config)
+    #     params["q"] = search_term
+    #     params["num"] = num_results*100
+
+    #     response = await self.get(url=self._endpoint, params=params)
+
+    #     # Extract the URLs from the response
+    #     results = response.get("organic_results", [])
+    #     urls = [res.get("link") for res in results]
+    #     logger.info(f'Found {len(urls)} URLs from SerpApi search for search_term="{search_term}".')
+    #     return urls
+
+    async def search(self, search_term: str, location: str, num_results: int) -> List[str]:
         """Performs a search using SerpApi and returns the URLs of the results.
 
         Args:
             search_term: The search term to use for the query.
+            location: The location to use for the query.
             num_results: Max number of results to return (default: 10).
         """
         # Setup the parameters
         logger.info(f'Performing SerpAPI search for search_term="{search_term}".')
-        params = deepcopy(self._base_config)
-        params["q"] = search_term
-        params["num"] = num_results
+        params = {
+            "q": search_term,
+            "location_requested": location,
+            "location_used": location,
+            "num": num_results,
+            "engine": self._engine,
+            "api_key": self._api_key,
+        }
 
         # Perform the request
-        try:
-            response = await self.get(url=self._endpoint, params=params)
-        except Exception as e:
-            logger.error(f'SerpAPI search failed with error: {e}.')
+        attempts = 0
+        err = None
+        while attempts < self._max_retries:
+            try:
+                logger.debug(f'Performing SerpAPI search for search_term="{search_term}" (Attempt {attempts + 1}).')
+                response = await self.get(url=self._endpoint, params=params)
+                break
+            except Exception as e:
+                logger.error(f'SerpAPI search failed with error: {e}.')
+                err = e
+            attempts += 1
+            if attempts < self._max_retries:
+                await asyncio.sleep(self._retry_delay)
+        if err is not None:
+            raise err
 
         # Extract the URLs from the response
         results = response.get("organic_results", [])
         urls = [res.get("link") for res in results]
-        logger.info(f"Found {len(urls)} URLs from SerpApi search.")
+        logger.info(f'Found {len(urls)} URLs from SerpApi search for search_term="{search_term}".')
         return urls
-
-    # @staticmethod
-    # def _check_limit(urls: List[str], query: str, limit: int = 200) -> List[str]:
-    #     """
-    #     Checks if the number of URLs exceeds the limit, and trims the list if necessary.
-
-    #     Args:
-    #         urls (List[str]): The list of URLs.
-    #         query (str): The search query.
-    #         limit (int): hight of limit
-
-    #     Returns:
-    #         List[str]: The potentially trimmed list of URLs.
-    #     """
-    #     if len(urls) > limit:
-    #         urls = urls[:limit]
-    #         logger.warning(f"Reached limit for keyword: {query}")
-    #     return urls
-
-    # def call_serpapi(
-    #     self,
-    #     params: Dict[str, Any],
-    #     log_name: str,
-    #     callback: Callable[int, None] | None = None,
-    # ) -> Dict[str, Any]:
-    #     """
-    #     Calls the SerpAPI and returns the response, with optional caching.
-
-    #     Args:
-    #         params (Dict[str, Any]): Parameters for the API call.
-    #         log_name (str): The name used for logging.
-    #         force_refresh (bool): Whether to bypass the cache and force a new API call (default is False).
-
-    #     Raises:
-    #         Exception: If all API call attempts fail.
-    #     """
-    #     import time
-    #     attempts = 0
-    #     max_retries = 5
-    #     retry_delay = 5
-    #     while attempts < max_retries:
-    #         try:
-    #             # search = GoogleSearch(params)
-    #             # response = search.get_response()
-    #             response = requests.get(
-    #                 url=self._endpoint,
-    #                 params=params,
-    #                 timeout=self._requests_timeout,
-    #             )
-    #             response.raise_for_status()
-    #             if callback is not None:
-    #                 callback(1)
-    #             return response.json()
-    #         except Exception as e:
-    #             logger.warning(
-    #                 f"API call failed with error: {e}. Retrying in {retry_delay} seconds..."
-    #             )
-    #             attempts += 1
-    #             time.sleep(retry_delay)
-    #     raise Exception("All API call attempts to SerpAPI failed.")
-
 
 
 class Keyword(BaseModel):
@@ -155,8 +134,8 @@ class Keyword(BaseModel):
     volume: int
 
 
-class DataForSeoApi(AsyncClient):
-    """A client to interact with the DataForSEO API for enhancing searches."""
+class Enricher(AsyncClient):
+    """A client to interact with the DataForSEO API for enhancing searches (producing alternative search_terms)."""
     
     _auth_encoding = 'ascii'
     _max_retries = 3
@@ -272,7 +251,7 @@ class DataForSeoApi(AsyncClient):
                 "include_seed_keyword": True,
             }
         ]
-        logger.info(f'DataForSEO search for suggested keywords with search_term="{search_term}".')
+        logger.debug(f'DataForSEO search for suggested keywords with search_term="{search_term}".')
         try:
             url = f"{self._base_endpoint}{self._suggestions_endpoint}"
             logger.debug(f'DataForSEO url="{url}" with data="{data}".')
@@ -286,7 +265,7 @@ class DataForSeoApi(AsyncClient):
         except Exception as e:
             logger.error(f'Failed to extract suggested keywords from DataForSEO response with error: {e}.')
         
-        logger.info(f"Found {len(keywords)} suggestions from DataForSEO search.")
+        logger.debug(f"Found {len(keywords)} suggestions from DataForSEO search.")
         return keywords
     
     @staticmethod
@@ -366,7 +345,7 @@ class DataForSeoApi(AsyncClient):
                 "limit": limit,
             }
         ]
-        logger.info(f'DataForSEO search for related keywords with search_term="{search_term}".')
+        logger.debug(f'DataForSEO search for related keywords with search_term="{search_term}".')
         try:
             url = f"{self._base_endpoint}{self._keywords_endpoint}"
             logger.debug(f'DataForSEO url="{url}" with data="{data}".')
@@ -380,13 +359,53 @@ class DataForSeoApi(AsyncClient):
         except Exception as e:
             logger.error(f'Failed to extract related keywords from DataForSEO response with error: {e}.')
         
-        logger.info(f"Found {len(keywords)} related keywords from DataForSEO search.")
+        logger.debug(f"Found {len(keywords)} related keywords from DataForSEO search.")
         return keywords
+    
+    async def apply(
+        self,
+        search_term: str,
+        location: str,
+        language: str,
+        n_terms: int,
+    ) -> List[str]:
+        """Applies the enrichment to a search_term.
+        
+        Args:
+            search_term: The search term to use for the query.
+            location: The location to use for the search.
+            language: The language to use for the search.
+            n_terms: The number of additional terms
+        """
+        # Get the additional keywords
+
+        logger.info(f'Applying enrichment for search_term="{search_term}" and n_terms="{n_terms}".')
+        suggested = await self.get_suggested_keywords(
+            search_term=search_term,
+            location=location,
+            language=language,
+            limit=n_terms,
+        )
+        related = await self.get_related_keywords(
+            search_term=search_term,
+            location=location,
+            language=language,
+            limit=n_terms,
+        )
+
+        # TODO continue from here
+        #  - filter out the blacklisted search terms (c.f. utils)
+        #  - aggregate the keywords (sum the volumes for duplicates)
+        #    Q: WHY ARE THE KEYWORDS OF DIFFERENT LANGUAGES AND LOCATIONS IN THE OLD VERSION???
+        #  - sort the keywords by volume
+        #  - search for the terms with SerpApi
+        #  - aggregate the urls (sum the volumes for duplicates)
+        #    Q: IS THIS REALLY NECESSARY? WHY NOT JUST RETURN THE URLS?
 
 
-class KeywordEnricher:
-    pass
-
-class Search:
-    async def apply():
-        pass
+        # Combine the keywords and sort them by volume
+        keywords = suggested + related
+        keywords = sorted(keywords, key=lambda kw: kw.volume, reverse=True)
+        terms = [kw.text for kw in keywords[:n_terms]]
+        logger.info(f"Found {len(terms)} additional terms.")
+        return terms
