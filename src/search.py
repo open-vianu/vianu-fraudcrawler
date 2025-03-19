@@ -260,6 +260,8 @@ class DataForSeoApi(AsyncClient):
             language: The language to use for the search.
             limit: The upper limit of suggestions to get.
         """
+        
+        # Data must be a list of dictionaries setting a number of search tasks; here we only have one task.  
         data = [
             {
                 "keyword": search_term,
@@ -354,6 +356,8 @@ class DataForSeoApi(AsyncClient):
             language: The language to use for the search.
             limit: The upper limit of suggestions to get.
         """
+
+        # Data must be a list of dictionaries setting a number of search tasks; here we only have one task.  
         data = [
             {
                 "keyword": search_term,
