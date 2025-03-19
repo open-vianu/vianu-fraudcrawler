@@ -1,6 +1,10 @@
-import pytest
+import logging
 
+from src.settings import LOG_FMT, LOG_LVL
 from src.base import Setup
+
+logging.basicConfig(level=LOG_LVL.upper(), format=LOG_FMT)
+logger = logging.getLogger(__name__)
 
 def test_setup():
     setup = Setup()

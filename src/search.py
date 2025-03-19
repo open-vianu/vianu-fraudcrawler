@@ -1,15 +1,46 @@
+from base64 import b64encode
 from copy import deepcopy
-import json
 import logging
-import os
-from typing import List, Dict, Any, Callable
+from pydantic import BaseModel
+from typing import List, Iterator
 
 import aiohttp
+
+from src.settings import ENRICHMENT_UPPER_LIMIT
 
 logger = logging.getLogger(__name__)
 
 
-class SerpApi:
+class AsyncClient:
+
+    @staticmethod
+    async def get(
+        url: str,
+        headers: dict | None = None,
+        params: dict | None = None,
+    ) -> dict:
+        """Async GET request of a given URL returning the data."""
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.get(url=url, params=params) as response:
+                response.raise_for_status()
+                json_ = await response.json()
+        return json_
+    
+    @staticmethod
+    async def post(
+        url: str,
+        headers: dict | None = None,
+        data: dict | None = None,
+    ) -> dict:
+        """Async POST request of a given URL returning the data."""
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.post(url=url, json=data) as response:
+                response.raise_for_status()
+                json_ = await response.json()
+        return json_
+
+
+class SerpApi(AsyncClient):
     """A client to interact with the SerpApi for performing searches."""
 
     _endpoint = "https://serpapi.com/search"
@@ -22,6 +53,7 @@ class SerpApi:
             api_key: The API key for SerpApi.
             location: The location to use for the search (default: "Switzerland").
         """
+        super().__init__()
         self._api_key = api_key
         self._location = location
         self._base_config = {
@@ -31,19 +63,6 @@ class SerpApi:
             "location_used": self._location,
         }
 
-    @staticmethod
-    async def _aiohttp_get(
-        url: str,
-        headers: dict | None = None,
-        params: dict | None = None,
-    ) -> dict:
-        """Get the content of a given URL by an aiohttp GET request."""
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(url=url, params=params) as response:
-                response.raise_for_status()
-                json_ = await response.json()
-        return json_
-    
     async def search(self, search_term: str, num_results: int = 10) -> List[str]:
         """Performs a search using SerpApi and returns the URLs of the results.
 
@@ -58,10 +77,13 @@ class SerpApi:
         params["num"] = num_results
 
         # Perform the request
-        data = await self._aiohttp_get(url=self._endpoint, params=params)
+        try:
+            response = await self.get(url=self._endpoint, params=params)
+        except Exception as e:
+            logger.error(f'SerpAPI search failed with error: {e}.')
 
         # Extract the URLs from the response
-        results = data.get("organic_results", [])
+        results = response.get("organic_results", [])
         urls = [res.get("link") for res in results]
         logger.info(f"Found {len(urls)} URLs from SerpApi search.")
         return urls
@@ -127,163 +149,240 @@ class SerpApi:
     #     raise Exception("All API call attempts to SerpAPI failed.")
 
 
-class DataForSeoApi:
-    """A client to interact with the DataforSEO API for enhancing searches."""
+
+class Keyword(BaseModel):
+    text: str
+    volume: int
+
+
+class DataForSeoApi(AsyncClient):
+    """A client to interact with the DataForSEO API for enhancing searches."""
     
+    _auth_encoding = 'ascii'
     _max_retries = 3
     _retry_delay = 2
+    _base_endpoint = "https://api.dataforseo.com"
     _suggestions_endpoint = "/v3/dataforseo_labs/google/keyword_suggestions/live"
     _keywords_endpoint = "/v3/dataforseo_labs/google/related_keywords/live"
 
-### --- CONTINUE FROM HERE ---
-
-    def request(self, path, method, data=None):
-        """Make a request to the DataforSEO API
+    def __init__(self, user: str, pwd: str):
+        """Initializes the DataForSeoApiClient with the given username and password.
 
         Args:
-            path (str): path to the API endpoint
-            method (str): HTTP method
-            data (str): data to send with the request
-
-        Returns:
-            dict with the response from the API"""
-
-        connection = HTTPSConnection("api.dataforseo.com")
-        try:
-            base64_bytes = b64encode(
-                (
-                    "%s:%s"
-                    % (
-                        os.getenv("DATAFORSEO_USER", "YOUR_DATAFORSEO_USERNAME"),
-                        # self.context.settings.data_for_seo.username,
-                        os.getenv("DATAFORSEO_PWD", "YOUR_DATAFORSEO_PASSWORD"),
-                        # self.context.settings.data_for_seo.password,
-                    )
-                ).encode("ascii")
-            ).decode("ascii")
-            headers = {
-                "Authorization": "Basic %s" % base64_bytes,
-                "Content-Encoding": "gzip",
-            }
-            connection.request(method, path, headers=headers, body=data)
-            response = connection.getresponse()
-            if response.status >= 400:
-                raise Exception(
-                    f"Failed to call dataforseo: {response.status} {response.reason}"
-                )
-            return json.loads(response.read().decode())
-        finally:
-            connection.close()
-
-    def get(self, path):
-        return self.request(path, "GET")
-
-    def post(self, path, data):
-        if isinstance(data, str):
-            data_str = data
-        else:
-            data_str = json.dumps(data)
-        return self.request(path, "POST", data_str)
-
-    def get_keyword_suggestions(self, keyword, location_name, language_name, limit=100):
-        """Get keyword suggestions for a given keyword, location and language
-
-        Args:
-            keyword (str): keyword to get suggestions for
-            location_name (str): location name
-            language_name (str): language name
-            limit (int): limit of suggestions to get
-
-        Returns:
-            list of dictionaries with keyword, volume, location and language
+            user: The username for DataForSEO API.
+            pwd: The password for DataForSEO API.
         """
-        post_data = dict()
-        post_data[len(post_data)] = dict(
-            keyword=keyword,
-            location_name=location_name,
-            language_name=language_name,
-            include_serp_info=True,
-            include_seed_keyword=True,
-            limit=limit,
-        )
-        response = self.post(
-            "/v3/dataforseo_labs/google/keyword_suggestions/live", post_data
-        )
-        if response is None:
-            return None
-        else:
-            keywords = []
-            for task in response["tasks"]:
-                if "result" in task:
-                    for result in task["result"]:
-                        if "items" in result:
-                            for item in result["items"]:
-                                keyword = item["keyword"]
-                                search_volume = item["keyword_info"]["search_volume"]
-                                keywords.append(
-                                    {
-                                        "keywordEnriched": keyword,
-                                        "keywordLocation": location_name,
-                                        "keywordLanguage": language_name,
-                                        "keywordVolume": search_volume,
-                                        "offerRoot": "KEYWORD_SUGGESTION",
-                                    }
-                                )
-            return keywords
+        self._user = user
+        self._pwd = pwd
+        auth = f"{user}:{pwd}"
+        auth = b64encode(auth.encode(self._auth_encoding)).decode(self._auth_encoding)
+        self._headers = {
+            "Authorization": f"Basic {auth}",
+            "Content-Encoding": "gzip",
+        }
 
-    def get_related_keywords(self, keyword, location_name, language_name, limit=100):
-        """Get related keywords for a given keyword, location and language
+    @staticmethod
+    def _extract_items_from_data(data: dict) -> Iterator[dict]:
+        """Extracts the items from the DataForSEO response.
+        
+        Args:
+            data: The response data from DataForSEO.
+        """
+        tasks = data.get("tasks") or []  # in contrast to data.get("tasks", []) this handles the case where data["tasks"] is set to None
+        for task in tasks:
+            results = task.get("result") or []
+            for result in results:
+                items = result.get("items") or []
+                yield from items
+
+    @staticmethod
+    def _parse_suggested_keyword(item: dict) -> Keyword:
+        """Parses a keyword from an item in the DataForSEO suggested keyword search response.
 
         Args:
-            keyword (str): keyword to get suggestions for
-            location_name (str): location name
-            language_name (str): language name
-            limit (int): limit of suggestions to get
+            item: An item from the DataForSEO response.
+        """
+        text = item["keyword"]
+        volume = item["keyword_info"]["search_volume"]
+        return Keyword(text=text, volume=volume)
 
-        Returns:
-            list of tuples with keyword and search volume"""
-        post_data = dict()
-        post_data[len(post_data)] = dict(
-            keyword=keyword,
-            location_name=location_name,
-            language_name=language_name,
-            limit=limit,
-        )
-        response = self.post(
-            "/v3/dataforseo_labs/google/related_keywords/live", post_data
-        )
-        if response is None:
-            return None
-        else:
-            keywords = []
-            for task in response["tasks"]:
-                if "result" in task:
-                    for result in task["result"]:
-                        if "items" in result:
-                            for item in result["items"]:
-                                keyword = item["keyword_data"]["keyword"]
-                                search_volume = item["keyword_data"]["keyword_info"][
-                                    "search_volume"
-                                ]
-                                keywords.append(
-                                    {
-                                        "keywordEnriched": keyword,
-                                        "keywordLocation": location_name,
-                                        "keywordLanguage": language_name,
-                                        "keywordVolume": search_volume,
-                                        "offerRoot": "RELATED_KEYWORD",
-                                    }
-                                )
+    def _extract_suggested_keywords(self, data: dict) -> List[Keyword]:
+        """Extracts the keywords from the DataForSEO response for suggested keywords.
 
-            return keywords
+        Args:
+            data: The response data from DataForSEO.
+
+        The DataForSEO results are of the form
+        (c.f. https://docs.dataforseo.com/v3/dataforseo_labs/google/keyword_suggestions/live/?bash):
+        {
+          "tasks": [
+            {
+              "result": [
+                {
+                  "items": [
+                    {
+                      "keyword": <suggested-keyword>,
+                      "keyword_info": {
+                        "search_volume": <volume>
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+
+        Args:
+            data: The response data from DataForSEO.
+        """
+        keywords = []
+        for item in self._extract_items_from_data(data=data):
+            try:
+                keyword = self._parse_suggested_keyword(item)
+                keywords.append(keyword)
+            except Exception as e:
+                logger.warning(f"Ignoring keyword due to error: {e}.")
+        return keywords
+
+    async def get_suggested_keywords(
+        self,
+        search_term: str,
+        location: str,
+        language: str,
+        limit: int = ENRICHMENT_UPPER_LIMIT,
+    ) -> List[Keyword]:
+        """Get keyword suggestions for a given search_term.
+
+        Args:
+            search_term: The search term to use for the query.
+            location: The location to use for the search.
+            language: The language to use for the search.
+            limit: The upper limit of suggestions to get.
+        """
+        data = [
+            {
+                "keyword": search_term,
+                "location_name": location,
+                "language_name": language,
+                "limit": limit,
+                "include_serp_info": True,
+                "include_seed_keyword": True,
+            }
+        ]
+        logger.info(f'DataForSEO search for suggested keywords with search_term="{search_term}".')
+        try:
+            url = f"{self._base_endpoint}{self._suggestions_endpoint}"
+            logger.debug(f'DataForSEO url="{url}" with data="{data}".')
+            sugg_data = await self.post(url=url, headers=self._headers, data=data)
+        except Exception as e:
+            logger.error(f'DataForSEO suggested search failed with error: {e}.')
+
+        # Extract the keywords from the response
+        try:
+            keywords = self._extract_suggested_keywords(data=sugg_data)
+        except Exception as e:
+            logger.error(f'Failed to extract suggested keywords from DataForSEO response with error: {e}.')
+        
+        logger.info(f"Found {len(keywords)} suggestions from DataForSEO search.")
+        return keywords
+    
+    @staticmethod
+    def _parse_related_keyword(item: dict) -> Keyword:
+        """Parses a keyword from an item in the DataForSEO related keyword search response.
+
+        Args:
+            item: An item from the DataForSEO response.
+        """
+        text = item["keyword_data"]["keyword"]
+        volume = item["keyword_data"]["keyword_info"]["search_volume"]
+        return Keyword(text=text, volume=volume)
+
+    def _extract_related_keywords(self, data: dict) -> List[Keyword]:
+        """Extracts the keywords from the DataForSEO response for related keywords.
+
+        Args:
+            data: The response data from DataForSEO.
+
+        The DataForSEO results are of the form
+        (c.f. https://docs.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live/?bash):
+        {
+          "tasks": [
+            {
+              "result": [
+                {
+                  "items": [
+                    {
+                      "keyword_data": {
+                        "keyword": <related-keyword>,
+                        "keyword_info": {
+                          "search_volume": <volume>
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+
+        Args:
+            data: The response data from DataForSEO.
+        """
+        keywords = []
+        for item in self._extract_items_from_data(data=data):
+            try:
+                keyword = self._parse_related_keyword(item)
+                keywords.append(keyword)
+            except Exception as e:
+                logger.warning(f"Ignoring keyword due to error: {e}.")
+        return keywords
+
+    async def get_related_keywords(
+        self,
+        search_term: str,
+        location: str,
+        language: str,
+        limit: int = ENRICHMENT_UPPER_LIMIT,
+    ) -> List[Keyword]:
+        """Get related keywords for a given search_term.
+
+        Args:
+            search_term: The search term to use for the query.
+            location: The location to use for the search.
+            language: The language to use for the search.
+            limit: The upper limit of suggestions to get.
+        """
+        data = [
+            {
+                "keyword": search_term,
+                "location_name": location,
+                "language_name": language,
+                "limit": limit,
+            }
+        ]
+        logger.info(f'DataForSEO search for related keywords with search_term="{search_term}".')
+        try:
+            url = f"{self._base_endpoint}{self._keywords_endpoint}"
+            logger.debug(f'DataForSEO url="{url}" with data="{data}".')
+            rel_data = await self.post(url=url, headers=self._headers, data=data)
+        except Exception as e:
+            logger.error(f'DataForSEO related keyword search failed with error: {e}.')
+
+        # Extract the keywords from the response
+        try:
+            keywords = self._extract_related_keywords(data=rel_data)
+        except Exception as e:
+            logger.error(f'Failed to extract related keywords from DataForSEO response with error: {e}.')
+        
+        logger.info(f"Found {len(keywords)} related keywords from DataForSEO search.")
+        return keywords
 
 
 class KeywordEnricher:
     pass
 
 class Search:
-
-
-    
     async def apply():
         pass
