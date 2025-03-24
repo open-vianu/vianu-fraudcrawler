@@ -1,13 +1,13 @@
 import asyncio
 from base64 import b64encode
 import logging
-from pydantic import BaseModel
 from typing import List, Iterator
 
 import aiohttp
 
 from src.settings import MAX_RETRIES, RETRY_DELAY
 from src.settings import ENRICHMENT_UPPER_LIMIT
+from src.base import Host, Location, Language, Keyword
 
 logger = logging.getLogger(__name__)
 
@@ -65,41 +65,42 @@ class SerpApi(AsyncClient):
         self._max_retries = max_retries
         self._retry_delay = retry_delay
 
-    #     self._base_config = {
-    #         "engine": self._engine,
-    #         "api_key": api_key,
-    #         "location_requested": "Switzerland",
-    #         "location_used": "Switzerland",
-    #     }
-    # async def search(self, search_term: str, location: str, num_results: int) -> List[str]:
-    #     from copy import deepcopy
-    #     # Setup the parameters
-    #     params = deepcopy(self._base_config)
-    #     params["q"] = search_term
-    #     params["num"] = num_results*100
 
-    #     response = await self.get(url=self._endpoint, params=params)
-
-    #     # Extract the URLs from the response
-    #     results = response.get("organic_results", [])
-    #     urls = [res.get("link") for res in results]
-    #     logger.info(f'Found {len(urls)} URLs from SerpApi search for search_term="{search_term}".')
-    #     return urls
-
-    async def search(self, search_term: str, location: str, num_results: int) -> List[str]:
+    async def search(
+        self,
+        search_term: str,
+        location: Location,
+        num_results: int,
+        marketplaces: List[Host] | None = None,
+        excluded_urls: List[Host] | None = None,
+    ) -> List[str]:
         """Performs a search using SerpApi and returns the URLs of the results.
 
         Args:
             search_term: The search term to use for the query.
             location: The location to use for the query.
             num_results: Max number of results to return (default: 10).
+            marketplaces: The marketplaces to include in the search.
+            excluded_urls: The URLs to exclude from the search.
         """
         # Setup the parameters
         logger.info(f'Performing SerpAPI search for search_term="{search_term}".')
+
+        # Setup the parameters
+        #  - q: The search term (with potentially added site: parameters).
+        #  - location_[requested|used]: The location to use for the search.
+        #  - google_domain: The Google domain to use for the search (e.g. google.[com]).
+        #  - num: The number of results to return.
+        #  - engine: The search engine to use ('google' NOT 'google_shopping').
+        search_string = search_term
+        if marketplaces:
+            sites = [dom for host in marketplaces for dom in host.domains]
+            search_string += " site: " + " OR site:".join(s for s in sites)
         params = {
-            "q": search_term,
-            "location_requested": location,
-            "location_used": location,
+            "q": search_string,
+            "location_requested": location.name,
+            "location_used": location.name,
+            "google_domain": location.code,
             "num": num_results,
             "engine": self._engine,
             "api_key": self._api_key,
@@ -110,7 +111,7 @@ class SerpApi(AsyncClient):
         err = None
         while attempts < self._max_retries:
             try:
-                logger.debug(f'Performing SerpAPI search for search_term="{search_term}" (Attempt {attempts + 1}).')
+                logger.debug(f'Performing SerpAPI search with q="{search_string}" (Attempt {attempts + 1}).')
                 response = await self.get(url=self._endpoint, params=params)
                 break
             except Exception as e:
@@ -127,11 +128,6 @@ class SerpApi(AsyncClient):
         urls = [res.get("link") for res in results]
         logger.info(f'Found {len(urls)} URLs from SerpApi search for search_term="{search_term}".')
         return urls
-
-
-class Keyword(BaseModel):
-    text: str
-    volume: int
 
 
 class Enricher(AsyncClient):
@@ -224,7 +220,7 @@ class Enricher(AsyncClient):
                 logger.warning(f"Ignoring keyword due to error: {e}.")
         return keywords
 
-    async def get_suggested_keywords(
+    async def _get_suggested_keywords(
         self,
         search_term: str,
         location: str,
@@ -320,7 +316,7 @@ class Enricher(AsyncClient):
                 logger.warning(f"Ignoring keyword due to error: {e}.")
         return keywords
 
-    async def get_related_keywords(
+    async def _get_related_keywords(
         self,
         search_term: str,
         location: str,
@@ -380,13 +376,13 @@ class Enricher(AsyncClient):
         # Get the additional keywords
 
         logger.info(f'Applying enrichment for search_term="{search_term}" and n_terms="{n_terms}".')
-        suggested = await self.get_suggested_keywords(
+        suggested = await self._get_suggested_keywords(
             search_term=search_term,
             location=location,
             language=language,
             limit=n_terms,
         )
-        related = await self.get_related_keywords(
+        related = await self._get_related_keywords(
             search_term=search_term,
             location=location,
             language=language,
@@ -401,6 +397,9 @@ class Enricher(AsyncClient):
         #  - search for the terms with SerpApi
         #  - aggregate the urls (sum the volumes for duplicates)
         #    Q: IS THIS REALLY NECESSARY? WHY NOT JUST RETURN THE URLS?
+
+        # TODO
+        #  - use Location and Language models
 
 
         # Combine the keywords and sort them by volume
