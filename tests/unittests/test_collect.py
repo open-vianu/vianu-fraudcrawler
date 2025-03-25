@@ -1,6 +1,6 @@
 import pytest
 
-from src.base import Setup, Keyword, Host, Location, Language
+from src.common.base import Setup, Keyword, Host, Location, Language
 from src.collect import SerpApi, Enricher
 
 

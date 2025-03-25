@@ -2,8 +2,8 @@ from base64 import b64encode
 import logging
 from typing import List, Iterator
 
-from src.settings import ENRICHMENT_UPPER_LIMIT
-from src.base import Location, Language, Keyword, AsyncClient
+from src.common.settings import ENRICHMENT_UPPER_LIMIT
+from src.common.base import Location, Language, Keyword, AsyncClient
 
 
 logger = logging.getLogger(__name__)
