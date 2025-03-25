@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from typing import List
+from urllib.parse import urlparse
 
 from src.settings import MAX_RETRIES, RETRY_DELAY
 from src.base import Host, Location, AsyncClient
@@ -33,6 +34,28 @@ class SerpApi(AsyncClient):
         self._retry_delay = retry_delay
 
 
+    @staticmethod
+    def _get_hostname(url: str) -> str | None:
+        """Extracts the hostname together with the top-level domain in the form `hostname.tld.
+    
+        Args:
+            url: The URL to be processed.
+    
+        """
+        # Add scheme (if needed -> urlparse requires it)
+        if not url.startswith(("http://", "https://")):
+            url = "http://" + url
+    
+        # Get the hostname
+        hostname = urlparse(url).hostname
+    
+        # Remove 'www' subdomain
+        if hostname and hostname.startswith("www."):
+            hostname = hostname[4:]
+    
+        return hostname
+
+
     async def search(
         self,
         search_term: str,
@@ -54,7 +77,7 @@ class SerpApi(AsyncClient):
         logger.info(f'Performing SerpAPI search for search_term="{search_term}".')
 
         # Setup the parameters
-        #  - q: The search term (with potentially added site: parameters).
+        #  - q: The search term (with potentially added site: parameters for marketplaces).
         #  - location_[requested|used]: The location to use for the search.
         #  - google_domain: The Google domain to use for the search (e.g. google.[com]).
         #  - num: The number of results to return.
@@ -62,7 +85,7 @@ class SerpApi(AsyncClient):
         search_string = search_term
         if marketplaces:
             sites = [dom for host in marketplaces for dom in host.domains]
-            search_string += " site: " + " OR site:".join(s for s in sites)
+            search_string += " site:" + " OR site:".join(s for s in sites)
         params = {
             "q": search_string,
             "location_requested": location.name,
@@ -93,7 +116,15 @@ class SerpApi(AsyncClient):
         # Extract the URLs from the response
         results = response.get("organic_results", [])
         urls = [res.get("link") for res in results]
-        logger.info(f'Found {len(urls)} URLs from SerpApi search for search_term="{search_term}".')
+        logger.debug(f'Found {len(urls)} URLs from SerpApi search for q="{search_string}".')
+
+        # Filter out the excluded URLs
+        if excluded_urls:
+            excluded = [dom for excl in excluded_urls for dom in excl.domains]
+            urls = [url for url in urls if self._get_hostname(url) not in excluded]
+            logger.debug(f'Filtered down to {len(urls)} URLs after excluding given domains.')
+
+        logger.info(f'Found {len(urls)} URLs from SerpApi search with q="{search_string}".')
         return urls
 
 
