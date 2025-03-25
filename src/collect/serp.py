@@ -33,28 +33,26 @@ class SerpApi(AsyncClient):
         self._max_retries = max_retries
         self._retry_delay = retry_delay
 
-
     @staticmethod
     def _get_hostname(url: str) -> str | None:
         """Extracts the hostname together with the top-level domain in the form `hostname.tld.
-    
+
         Args:
             url: The URL to be processed.
-    
+
         """
         # Add scheme (if needed -> urlparse requires it)
         if not url.startswith(("http://", "https://")):
             url = "http://" + url
-    
+
         # Get the hostname
         hostname = urlparse(url).hostname
-    
+
         # Remove 'www' subdomain
         if hostname and hostname.startswith("www."):
             hostname = hostname[4:]
-    
-        return hostname
 
+        return hostname
 
     async def search(
         self,
@@ -101,11 +99,13 @@ class SerpApi(AsyncClient):
         err = None
         while attempts < self._max_retries:
             try:
-                logger.debug(f'Performing SerpAPI search with q="{search_string}" (Attempt {attempts + 1}).')
+                logger.debug(
+                    f'Performing SerpAPI search with q="{search_string}" (Attempt {attempts + 1}).'
+                )
                 response = await self.get(url=self._endpoint, params=params)
                 break
             except Exception as e:
-                logger.error(f'SerpAPI search failed with error: {e}.')
+                logger.error(f"SerpAPI search failed with error: {e}.")
                 err = e
             attempts += 1
             if attempts < self._max_retries:
@@ -116,15 +116,19 @@ class SerpApi(AsyncClient):
         # Extract the URLs from the response
         results = response.get("organic_results", [])
         urls = [res.get("link") for res in results]
-        logger.debug(f'Found {len(urls)} URLs from SerpApi search for q="{search_string}".')
+        logger.debug(
+            f'Found {len(urls)} URLs from SerpApi search for q="{search_string}".'
+        )
 
         # Filter out the excluded URLs
         if excluded_urls:
             excluded = [dom for excl in excluded_urls for dom in excl.domains]
             urls = [url for url in urls if self._get_hostname(url) not in excluded]
-            logger.debug(f'Filtered down to {len(urls)} URLs after excluding given domains.')
+            logger.debug(
+                f"Filtered down to {len(urls)} URLs after excluding given domains."
+            )
 
-        logger.info(f'Found {len(urls)} URLs from SerpApi search with q="{search_string}".')
+        logger.info(
+            f'Found {len(urls)} URLs from SerpApi search with q="{search_string}".'
+        )
         return urls
-
-

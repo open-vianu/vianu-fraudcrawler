@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 
 class Enricher(AsyncClient):
     """A client to interact with the DataForSEO API for enhancing searches (producing alternative search_terms)."""
-    
-    _auth_encoding = 'ascii'
+
+    _auth_encoding = "ascii"
     _max_retries = 3
     _retry_delay = 2
     _base_endpoint = "https://api.dataforseo.com"
@@ -38,11 +38,13 @@ class Enricher(AsyncClient):
     @staticmethod
     def _extract_items_from_data(data: dict) -> Iterator[dict]:
         """Extracts the items from the DataForSEO response.
-        
+
         Args:
             data: The response data from DataForSEO.
         """
-        tasks = data.get("tasks") or []  # in contrast to data.get("tasks", []) this handles the case where data["tasks"] is set to None
+        tasks = (
+            data.get("tasks") or []
+        )  # in contrast to data.get("tasks", []) this handles the case where data["tasks"] is set to None
         for task in tasks:
             results = task.get("result") or []
             for result in results:
@@ -114,8 +116,8 @@ class Enricher(AsyncClient):
             language: The language to use for the search.
             limit: The upper limit of suggestions to get.
         """
-        
-        # Data must be a list of dictionaries setting a number of search tasks; here we only have one task.  
+
+        # Data must be a list of dictionaries setting a number of search tasks; here we only have one task.
         data = [
             {
                 "keyword": search_term,
@@ -126,23 +128,27 @@ class Enricher(AsyncClient):
                 "include_seed_keyword": True,
             }
         ]
-        logger.debug(f'DataForSEO search for suggested keywords with search_term="{search_term}".')
+        logger.debug(
+            f'DataForSEO search for suggested keywords with search_term="{search_term}".'
+        )
         try:
             url = f"{self._base_endpoint}{self._suggestions_endpoint}"
             logger.debug(f'DataForSEO url="{url}" with data="{data}".')
             sugg_data = await self.post(url=url, headers=self._headers, data=data)
         except Exception as e:
-            logger.error(f'DataForSEO suggested search failed with error: {e}.')
+            logger.error(f"DataForSEO suggested search failed with error: {e}.")
 
         # Extract the keywords from the response
         try:
             keywords = self._extract_suggested_keywords(data=sugg_data)
         except Exception as e:
-            logger.error(f'Failed to extract suggested keywords from DataForSEO response with error: {e}.')
-        
+            logger.error(
+                f"Failed to extract suggested keywords from DataForSEO response with error: {e}."
+            )
+
         logger.debug(f"Found {len(keywords)} suggestions from DataForSEO search.")
         return keywords
-    
+
     @staticmethod
     def _parse_related_keyword(item: dict) -> Keyword:
         """Parses a keyword from an item in the DataForSEO related keyword search response.
@@ -211,7 +217,7 @@ class Enricher(AsyncClient):
             limit: The upper limit of suggestions to get.
         """
 
-        # Data must be a list of dictionaries setting a number of search tasks; here we only have one task.  
+        # Data must be a list of dictionaries setting a number of search tasks; here we only have one task.
         data = [
             {
                 "keyword": search_term,
@@ -220,23 +226,27 @@ class Enricher(AsyncClient):
                 "limit": limit,
             }
         ]
-        logger.debug(f'DataForSEO search for related keywords with search_term="{search_term}".')
+        logger.debug(
+            f'DataForSEO search for related keywords with search_term="{search_term}".'
+        )
         try:
             url = f"{self._base_endpoint}{self._keywords_endpoint}"
             logger.debug(f'DataForSEO url="{url}" with data="{data}".')
             rel_data = await self.post(url=url, headers=self._headers, data=data)
         except Exception as e:
-            logger.error(f'DataForSEO related keyword search failed with error: {e}.')
+            logger.error(f"DataForSEO related keyword search failed with error: {e}.")
 
         # Extract the keywords from the response
         try:
             keywords = self._extract_related_keywords(data=rel_data)
         except Exception as e:
-            logger.error(f'Failed to extract related keywords from DataForSEO response with error: {e}.')
-        
+            logger.error(
+                f"Failed to extract related keywords from DataForSEO response with error: {e}."
+            )
+
         logger.debug(f"Found {len(keywords)} related keywords from DataForSEO search.")
         return keywords
-    
+
     async def apply(
         self,
         search_term: str,
@@ -245,7 +255,7 @@ class Enricher(AsyncClient):
         n_terms: int,
     ) -> List[str]:
         """Applies the enrichment to a search_term.
-        
+
         Args:
             search_term: The search term to use for the query.
             location: The location to use for the search.
@@ -254,7 +264,9 @@ class Enricher(AsyncClient):
         """
         # Get the additional keywords
 
-        logger.info(f'Applying enrichment for search_term="{search_term}" and n_terms="{n_terms}".')
+        logger.info(
+            f'Applying enrichment for search_term="{search_term}" and n_terms="{n_terms}".'
+        )
         suggested = await self._get_suggested_keywords(
             search_term=search_term,
             location=location,
@@ -279,7 +291,6 @@ class Enricher(AsyncClient):
 
         # TODO
         #  - use Location and Language models
-
 
         # Combine the keywords and sort them by volume
         keywords = suggested + related

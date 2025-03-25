@@ -6,6 +6,7 @@ from src.base import Setup, Host, Location, Language
 logging.basicConfig(level=LOG_LVL.upper(), format=LOG_FMT)
 logger = logging.getLogger(__name__)
 
+
 def test_setup():
     setup = Setup()
     assert setup.serpapi_key

@@ -4,6 +4,7 @@ from typing import List
 
 import aiohttp
 
+
 class Setup(BaseSettings):
     """Class for loading environment variables."""
 
@@ -21,38 +22,42 @@ class Setup(BaseSettings):
 
 class Host(BaseModel):
     """Model for host details (e.g. `Host(name="Galaxus", domains="galaxus.ch, digitec.ch")`)."""
+
     name: str
     domains: str | List[str]
 
-    @field_validator('domains', mode='before')
+    @field_validator("domains", mode="before")
     def split_domains_if_str(cls, val):
         if isinstance(val, str):
-            return [dom.strip() for dom in val.split(',')]
+            return [dom.strip() for dom in val.split(",")]
         return val
 
 
 class Location(BaseModel):
     """Model for location details (e.g. `Location(name="Switzerland", code="ch")`)."""
+
     name: str
     code: str
 
-    @field_validator('code', mode='before')
+    @field_validator("code", mode="before")
     def lower_code(cls, val):
         return val.lower()
 
 
 class Language(BaseModel):
     """Model for language details (e.g. `Language(name="German", code="de")`)."""
+
     name: str
     code: str
 
-    @field_validator('code', mode='before')
+    @field_validator("code", mode="before")
     def lower_code(cls, val):
         return val.lower()
 
 
 class Keyword(BaseModel):
     """Model for keyword details (e.g. `Keyword(text="sildenafil", volume=100)`)."""
+
     text: str
     volume: int
 
@@ -72,7 +77,7 @@ class AsyncClient:
                 response.raise_for_status()
                 json_ = await response.json()
         return json_
-    
+
     @staticmethod
     async def post(
         url: str,

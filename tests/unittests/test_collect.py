@@ -3,11 +3,13 @@ import pytest
 from src.base import Setup, Keyword, Host, Location, Language
 from src.collect import SerpApi, Enricher
 
+
 @pytest.fixture
 def serpapi():
     setup = Setup()
     serpapi = SerpApi(api_key=setup.serpapi_key)
     return serpapi
+
 
 @pytest.fixture
 def enricher():
@@ -17,6 +19,7 @@ def enricher():
         pwd=setup.dataforseo_pwd,
     )
     return enricher
+
 
 @pytest.mark.asyncio
 async def test_serpapi_search(serpapi):
@@ -48,6 +51,7 @@ async def test_serpapi_search_marketplaces(serpapi):
     assert all(isinstance(url, str) for url in urls)
     assert all(url.startswith("http") for url in urls)
 
+
 @pytest.mark.asyncio
 async def test_serpapi_search_excluded_urls(serpapi):
     search_term = "sildenafil"
@@ -63,11 +67,12 @@ async def test_serpapi_search_excluded_urls(serpapi):
     assert all(isinstance(url, str) for url in urls)
     assert all(url.startswith("http") for url in urls)
 
+
 @pytest.mark.asyncio
 async def test_enricher_get_suggested_keywords(enricher):
     search_term = "sildenafil"
     location = Location(name="Switzerland", code="ch")
-    language = Language(name="German", code='de')
+    language = Language(name="German", code="de")
     limit = 5
     keywords = await enricher._get_suggested_keywords(
         search_term=search_term,
@@ -83,7 +88,7 @@ async def test_enricher_get_suggested_keywords(enricher):
 async def test_enricher_get_related_keywords(enricher):
     search_term = "sildenafil"
     location = Location(name="Switzerland", code="ch")
-    language = Language(name="German", code='de')
+    language = Language(name="German", code="de")
     limit = 5
     keywords = await enricher._get_related_keywords(
         search_term=search_term,
@@ -99,7 +104,7 @@ async def test_enricher_get_related_keywords(enricher):
 async def test_enricher_apply(enricher):
     search_term = "sildenafil"
     location = Location(name="Switzerland", code="ch")
-    language = Language(name="German", code='de')
+    language = Language(name="German", code="de")
     n_terms = 5
     terms = await enricher.apply(
         search_term=search_term,
