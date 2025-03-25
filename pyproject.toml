@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "vianu-fraudcrawler"
-version = "0.1.0"
+version = "0.1.2"
 description = "Intelligent Market Monitoring"
 authors = [
     "chriguBERTO <christoph@vianu.ch>",
@@ -11,9 +11,7 @@ license = "MIT License"
 readme = "README.md"
 repository = "https://github/open-vianu/vianu-fraudcrawler"
 packages = [
-    { include = "common", from = "src" },
-    { include = "collect", from = "src" },
-    { include = "process", from = "src" },
+    {include = "fraudcrawler", from = "."},
 ]
 
 [tool.poetry.group.dev.dependencies]
