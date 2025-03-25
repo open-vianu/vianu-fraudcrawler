@@ -5,7 +5,7 @@ import logging
 import aiohttp
 from requests.auth import HTTPBasicAuth
 
-from src.common.settings import MAX_RETRIES, RETRY_DELAY
+from fraudcrawler.common.settings import MAX_RETRIES, RETRY_DELAY
 
 logger = logging.getLogger(__name__)
 

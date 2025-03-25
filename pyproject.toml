@@ -11,9 +11,7 @@ license = "MIT License"
 readme = "README.md"
 repository = "https://github/open-vianu/vianu-fraudcrawler"
 packages = [
-    { include = "common", from = "src" },
-    { include = "collect", from = "src" },
-    { include = "process", from = "src" },
+    { include = "fraudcrawler"},
 ]
 
 [tool.poetry.group.dev.dependencies]
