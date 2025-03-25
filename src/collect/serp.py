@@ -3,8 +3,8 @@ import logging
 from typing import List
 from urllib.parse import urlparse
 
-from src.settings import MAX_RETRIES, RETRY_DELAY
-from src.base import Host, Location, AsyncClient
+from src.common.settings import MAX_RETRIES, RETRY_DELAY
+from src.common.base import Host, Location, AsyncClient
 
 logger = logging.getLogger(__name__)
 
