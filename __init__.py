@@ -1,20 +1,13 @@
 import logging
 
-# Create a named logger
-logger = logging.getLogger("fraudcrawler_logger")
+from src.settings import LOG_FMT, LOG_LVL
+from src import base
+from src import collect
 
-# Set the log level
-logger.setLevel(logging.INFO)
+logging.basicConfig(level=LOG_LVL.upper(), format=LOG_FMT)
+logger = logging.getLogger(__name__)
 
-# Define a custom formatter
-formatter = logging.Formatter(
-    fmt="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
-# Create a console handler
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(formatter)
-
-# Add the handler to the logger
-logger.addHandler(console_handler)
+__all__ = [
+    "base",
+    "collect",
+]
