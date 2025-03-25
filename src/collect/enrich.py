@@ -1,133 +1,12 @@
-import asyncio
 from base64 import b64encode
 import logging
 from typing import List, Iterator
 
-import aiohttp
-
-from src.settings import MAX_RETRIES, RETRY_DELAY
 from src.settings import ENRICHMENT_UPPER_LIMIT
-from src.base import Host, Location, Language, Keyword
+from src.base import Location, Language, Keyword, AsyncClient
+
 
 logger = logging.getLogger(__name__)
-
-
-class AsyncClient:
-
-    @staticmethod
-    async def get(
-        url: str,
-        headers: dict | None = None,
-        params: dict | None = None,
-    ) -> dict:
-        """Async GET request of a given URL returning the data."""
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(url=url, params=params) as response:
-                response.raise_for_status()
-                json_ = await response.json()
-        return json_
-    
-    @staticmethod
-    async def post(
-        url: str,
-        headers: dict | None = None,
-        data: dict | None = None,
-    ) -> dict:
-        """Async POST request of a given URL returning the data."""
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.post(url=url, json=data) as response:
-                response.raise_for_status()
-                json_ = await response.json()
-        return json_
-
-
-class SerpApi(AsyncClient):
-    """A client to interact with the SerpApi for performing searches."""
-
-    _endpoint = "https://serpapi.com/search"
-    _engine = "google"
-
-    def __init__(
-        self,
-        api_key: str,
-        max_retries: int = MAX_RETRIES,
-        retry_delay: int = RETRY_DELAY,
-    ):
-        """Initializes the SerpApiClient with the given API key.
-
-        Args:
-            api_key: The API key for SerpApi.
-            max_retries: Maximum number of retries for API calls.
-            retry_delay: Delay between retries in seconds.
-        """
-        super().__init__()
-        self._api_key = api_key
-        self._max_retries = max_retries
-        self._retry_delay = retry_delay
-
-
-    async def search(
-        self,
-        search_term: str,
-        location: Location,
-        num_results: int,
-        marketplaces: List[Host] | None = None,
-        excluded_urls: List[Host] | None = None,
-    ) -> List[str]:
-        """Performs a search using SerpApi and returns the URLs of the results.
-
-        Args:
-            search_term: The search term to use for the query.
-            location: The location to use for the query.
-            num_results: Max number of results to return (default: 10).
-            marketplaces: The marketplaces to include in the search.
-            excluded_urls: The URLs to exclude from the search.
-        """
-        # Setup the parameters
-        logger.info(f'Performing SerpAPI search for search_term="{search_term}".')
-
-        # Setup the parameters
-        #  - q: The search term (with potentially added site: parameters).
-        #  - location_[requested|used]: The location to use for the search.
-        #  - google_domain: The Google domain to use for the search (e.g. google.[com]).
-        #  - num: The number of results to return.
-        #  - engine: The search engine to use ('google' NOT 'google_shopping').
-        search_string = search_term
-        if marketplaces:
-            sites = [dom for host in marketplaces for dom in host.domains]
-            search_string += " site: " + " OR site:".join(s for s in sites)
-        params = {
-            "q": search_string,
-            "location_requested": location.name,
-            "location_used": location.name,
-            "google_domain": location.code,
-            "num": num_results,
-            "engine": self._engine,
-            "api_key": self._api_key,
-        }
-
-        # Perform the request
-        attempts = 0
-        err = None
-        while attempts < self._max_retries:
-            try:
-                logger.debug(f'Performing SerpAPI search with q="{search_string}" (Attempt {attempts + 1}).')
-                response = await self.get(url=self._endpoint, params=params)
-                break
-            except Exception as e:
-                logger.error(f'SerpAPI search failed with error: {e}.')
-                err = e
-            attempts += 1
-            if attempts < self._max_retries:
-                await asyncio.sleep(self._retry_delay)
-        if err is not None:
-            raise err
-
-        # Extract the URLs from the response
-        results = response.get("organic_results", [])
-        urls = [res.get("link") for res in results]
-        logger.info(f'Found {len(urls)} URLs from SerpApi search for search_term="{search_term}".')
-        return urls
 
 
 class Enricher(AsyncClient):
@@ -223,8 +102,8 @@ class Enricher(AsyncClient):
     async def _get_suggested_keywords(
         self,
         search_term: str,
-        location: str,
-        language: str,
+        language: Language,
+        location: Location,
         limit: int = ENRICHMENT_UPPER_LIMIT,
     ) -> List[Keyword]:
         """Get keyword suggestions for a given search_term.
@@ -240,8 +119,8 @@ class Enricher(AsyncClient):
         data = [
             {
                 "keyword": search_term,
-                "location_name": location,
-                "language_name": language,
+                "language_name": language.name,
+                "location_name": location.name,
                 "limit": limit,
                 "include_serp_info": True,
                 "include_seed_keyword": True,
@@ -319,8 +198,8 @@ class Enricher(AsyncClient):
     async def _get_related_keywords(
         self,
         search_term: str,
-        location: str,
-        language: str,
+        language: Language,
+        location: Location,
         limit: int = ENRICHMENT_UPPER_LIMIT,
     ) -> List[Keyword]:
         """Get related keywords for a given search_term.
@@ -336,8 +215,8 @@ class Enricher(AsyncClient):
         data = [
             {
                 "keyword": search_term,
-                "location_name": location,
-                "language_name": language,
+                "language_name": language.name,
+                "location_name": location.name,
                 "limit": limit,
             }
         ]
@@ -361,8 +240,8 @@ class Enricher(AsyncClient):
     async def apply(
         self,
         search_term: str,
-        location: str,
-        language: str,
+        language: Language,
+        location: Location,
         n_terms: int,
     ) -> List[str]:
         """Applies the enrichment to a search_term.

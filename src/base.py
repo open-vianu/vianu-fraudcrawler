@@ -2,6 +2,7 @@ from pydantic import BaseModel, field_validator
 from pydantic_settings import BaseSettings
 from typing import List
 
+import aiohttp
 
 class Setup(BaseSettings):
     """Class for loading environment variables."""
@@ -51,5 +52,36 @@ class Language(BaseModel):
 
 
 class Keyword(BaseModel):
+    """Model for keyword details (e.g. `Keyword(text="sildenafil", volume=100)`)."""
     text: str
     volume: int
+
+
+class AsyncClient:
+    """Base class for sub-classes using async HTTP requests."""
+
+    @staticmethod
+    async def get(
+        url: str,
+        headers: dict | None = None,
+        params: dict | None = None,
+    ) -> dict:
+        """Async GET request of a given URL returning the data."""
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.get(url=url, params=params) as response:
+                response.raise_for_status()
+                json_ = await response.json()
+        return json_
+    
+    @staticmethod
+    async def post(
+        url: str,
+        headers: dict | None = None,
+        data: dict | None = None,
+    ) -> dict:
+        """Async POST request of a given URL returning the data."""
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.post(url=url, json=data) as response:
+                response.raise_for_status()
+                json_ = await response.json()
+        return json_

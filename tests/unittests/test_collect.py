@@ -1,12 +1,7 @@
-import logging
 import pytest
 
-from src.settings import LOG_FMT, LOG_LVL
-from src.base import Setup
-from src.search import SerpApi, Enricher, Keyword
-
-logging.basicConfig(level=LOG_LVL.upper(), format=LOG_FMT)
-logger = logging.getLogger(__name__)
+from src.base import Setup, Keyword, Location, Language
+from src.collect import SerpApi, Enricher
 
 @pytest.fixture
 def serpapi():
@@ -26,7 +21,7 @@ def enricher():
 @pytest.mark.asyncio
 async def test_serpapi_search(serpapi):
     search_term = "sildenafil"
-    location = "Switzerland"
+    location = Location(name="Switzerland", code="ch")
     num_results = 5
     urls = await serpapi.search(
         search_term=search_term,
@@ -40,10 +35,10 @@ async def test_serpapi_search(serpapi):
 @pytest.mark.asyncio
 async def test_enricher_get_suggested_keywords(enricher):
     search_term = "sildenafil"
-    location = "Switzerland"
-    language = "German"
+    location = Location(name="Switzerland", code="ch")
+    language = Language(name="German", code='de')
     limit = 5
-    keywords = await enricher.get_suggested_keywords(
+    keywords = await enricher._get_suggested_keywords(
         search_term=search_term,
         location=location,
         language=language,
@@ -56,10 +51,10 @@ async def test_enricher_get_suggested_keywords(enricher):
 @pytest.mark.asyncio
 async def test_enricher_get_related_keywords(enricher):
     search_term = "sildenafil"
-    location = "Switzerland"
-    language = "German"
+    location = Location(name="Switzerland", code="ch")
+    language = Language(name="German", code='de')
     limit = 5
-    keywords = await enricher.get_related_keywords(
+    keywords = await enricher._get_related_keywords(
         search_term=search_term,
         location=location,
         language=language,
@@ -72,8 +67,8 @@ async def test_enricher_get_related_keywords(enricher):
 @pytest.mark.asyncio
 async def test_enricher_apply(enricher):
     search_term = "sildenafil"
-    location = "Switzerland"
-    language = "German"
+    location = Location(name="Switzerland", code="ch")
+    language = Language(name="German", code='de')
     n_terms = 5
     terms = await enricher.apply(
         search_term=search_term,
