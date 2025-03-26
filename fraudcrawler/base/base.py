@@ -1,9 +1,11 @@
-from abc import ABC, abstractmethod
+import logging
 from pydantic import BaseModel, field_validator
 from pydantic_settings import BaseSettings
 from typing import List
 
 import aiohttp
+
+logger = logging.getLogger(__name__)
 
 
 class Setup(BaseSettings):
@@ -84,20 +86,13 @@ class AsyncClient:
         url: str,
         headers: dict | None = None,
         data: dict | None = None,
+        auth: aiohttp.BasicAuth | None = None,
     ) -> dict:
         """Async POST request of a given URL returning the data."""
         async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.post(url=url, json=data) as response:
+            async with session.post(url=url, json=data, auth=auth) as response:
                 response.raise_for_status()
                 json_ = await response.json()
         return json_
 
 
-# class Orchestrator(ABC):
-#     """Abstract base class for orchestrating the different actors (crawling, processing).
-
-#     For each pipeline step it will deploy a number of async workers to handle the tasks. In addition
-#     it makes sure to orchestrate the canceling of the workers only after the relevant workload is done.
-#     """
-
-#     def __init__(

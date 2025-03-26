@@ -1,8 +1,7 @@
 import pytest
 
 from fraudcrawler.base.base import Setup, Keyword, Host, Location, Language
-from fraudcrawler.scraping.serp import SerpApi
-from fraudcrawler.scraping.enrich import Enricher
+from fraudcrawler import SerpApi, Enricher, ZyteApi
 
 
 @pytest.fixture
@@ -20,6 +19,13 @@ def enricher():
         pwd=setup.dataforseo_pwd,
     )
     return enricher
+
+
+@pytest.fixture
+def zyteapi():
+    setup = Setup()
+    zyteapi = ZyteApi(api_key=setup.zyteapi_key)
+    return zyteapi
 
 
 @pytest.mark.asyncio
@@ -115,3 +121,13 @@ async def test_enricher_apply(enricher):
     )
     assert len(terms) == n_terms
     assert all(isinstance(t, str) for t in terms)
+
+
+@pytest.mark.asyncio
+async def test_zyteapi_get_results(zyteapi):
+    url = "https://www.altibbi.com/answer/159"
+    product = await zyteapi.get_details(url=url)
+    assert product
+    assert product.get("url") == url
+    assert 'product' in product
+    assert 'metadata' in product['product']

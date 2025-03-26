@@ -2,12 +2,17 @@ import logging
 
 # import pandas as pd
 
+from src.base.base import Orchestrator
 # from src.collect.serp import SerpApi
 # from src.zyteapi import ZyteAPIClient
 # from src.processor import Processor
 # from src.enrichment import KeywordEnricher
 
 logger = logging.getLogger(__name__)
+
+
+class FraudCrawlerClient(Orchestrator):
+    pass
 
 
 # class FraudCrawlerClient:
