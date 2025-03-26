@@ -118,7 +118,7 @@ class Orchestrator(ABC):
                 break
 
             try:
-                product = await self._zyteapi.apply(url=url)
+                product = await self._zyteapi.get_details(url=url)
                 if self._zyteapi.keep_product(product=product, threshold=threshold):
                     await queue_out.put(product)
                 else:
@@ -166,7 +166,6 @@ class Orchestrator(ABC):
             n_serp_wkrs: int,
             n_zyte_wkrs: int,
             n_proc_wkrs: int,
-            country_code: str,
             threshold: float,
             context: str,
         ) -> List[asyncio.Queue]:
@@ -176,8 +175,7 @@ class Orchestrator(ABC):
             n_serp_wkrs: Number of async workers for serp.
             n_zyte_wkrs: Number of async workers for zyte.
             n_proc_wkrs: Number of async workers for processor.
-            country_code: The country code used to filter the products (func:`Processor.keep_product`).
-            threshold: The probability threshold used to filter the products (func:`Processor.keep_product`).
+            threshold: The probability threshold used to filter the products (func:`ZyteApi.keep_product`).
             context: The context used by the LLM for determining if a product is suspicious (func:`Processor.classify_product`).
 
         """
@@ -209,6 +207,7 @@ class Orchestrator(ABC):
                 self._zyte_execute(
                     queue_in=zyte_queue,
                     queue_out=proc_queue,
+                    threshold=threshold,
                 )
             )
             for _ in range(n_zyte_wkrs)
@@ -220,8 +219,6 @@ class Orchestrator(ABC):
                 self._proc_execute(
                     queue_in=proc_queue,
                     queue_out=res_queue,
-                    country_code=country_code,
-                    threshold=threshold,
                     context=context,
                 )
             )
@@ -246,6 +243,84 @@ class Orchestrator(ABC):
             "proc": proc_wkrs,
             "res": res_col,
         }
+
+    @staticmethod
+    async def _add_serp_items_for_search_term(
+        queue: asyncio.Queue,
+        search_term: str | List[str],
+        language: Language,
+        location: Location,
+        num_results: int,
+        marketplaces: List[Host] | None,
+        excluded_urls: List[Host] | None,
+    ) -> None:
+        """Adds one (plus one if marketplaces are given) item to the queue."""
+        # Add item without marketplaces
+        item = {
+            'search_term': search_term,
+            'language': language,
+            'location': location,
+            'num_results': num_results,
+            'excluded_urls': excluded_urls,
+        }
+        logger.debug(f'Adding item="{str(item)}" to serp_queue')
+        await queue.put(item)
+
+        # Add item with marketplaces
+        if marketplaces:
+            item = {
+                **item,
+                'marketplaces': marketplaces,
+            }
+            logger.debug(f'Adding item="{str(item)}" to serp_queue')
+            await queue.put(item)
+
+    async def _add_serp_items(
+        self,
+        queue: asyncio.Queue,
+        search_term: str | List[str],
+        language: Language,
+        location: Location,
+        deepness: Deepness,
+        marketplaces: List[Host] | None,
+        excluded_urls: List[Host] | None,
+    ) -> None:
+        """Adds all the (enriched) search terms items to the queue."""
+            
+        # Add initial items to the serp_queue
+        await self._add_serp_items_for_search_term(
+            queue=queue,
+            search_term=search_term,
+            language=language,
+            location=location,
+            num_results=deepness.num_results,
+            marketplaces=marketplaces,
+            excluded_urls=excluded_urls,
+        )
+
+        # Enrich the search_terms
+        enrichment = deepness.enrichment
+        if enrichment:
+            n_terms = enrichment.additional_terms
+            terms = self._enricher.apply(
+                search_term=search_term,
+                location=location,
+                language=language,
+                n_terms=n_terms,
+            )
+
+            # Add the enriched search terms to the serp_queue
+            for trm in terms:
+                self._add_serp_items_for_search_term(
+                    queue=queue,
+                    search_term=trm,
+                    language=language,
+                    location=location,
+                    deepness=deepness,
+                    marketplaces=marketplaces,
+                    excluded_urls=excluded_urls,
+                )
+
 
     async def run(
         self,
@@ -280,14 +355,33 @@ class Orchestrator(ABC):
             n_serp_wkrs=n_serp_wkrs,
             n_zyte_wkrs=n_zyte_wkrs,
             n_proc_wkrs=n_proc_wkrs,
-            country_code=location.code,
             threshold=threshold,
-            context=language.code,
+            context=context,
+        )
+
+        # TODO
+        # - continue from here
+        # - check the enrichement and its TODOs
+
+        # Add the search terms to the serp_queue
+        serp_queue = self._queues["serp"]
+        await self._add_serp_items(
+            queue=serp_queue,
+            search_term=search_term,
+            language=language,
+            location=location,
+            deepness=deepness,
+            marketplaces=marketplaces,
+            excluded_urls=excluded_urls,
         )
 
 
 
 
+
+
+
+# Filter additional search terms
 # TODO: put None for stopping url_collection also if no enrichment happens
 
 
