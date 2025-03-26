@@ -93,11 +93,11 @@ class AsyncClient:
         return json_
 
 
-class Orchestrator(ABC):
-    """Abstract base class for orchestrating the different actors (crawling, processing).
+# class Orchestrator(ABC):
+#     """Abstract base class for orchestrating the different actors (crawling, processing).
 
-    For each pipeline step it will deploy a number of async workers to handle the tasks. In addition
-    it makes sure to orchestrate the canceling of the workers only after the relevant workload is done.
-    """
+#     For each pipeline step it will deploy a number of async workers to handle the tasks. In addition
+#     it makes sure to orchestrate the canceling of the workers only after the relevant workload is done.
+#     """
 
-    def __init__(
+#     def __init__(
