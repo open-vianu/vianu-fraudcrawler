@@ -1,13 +1,12 @@
-import asyncio
 import logging
-from typing import List, Dict, Any
+from typing import Dict, Any
 
 from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
 
-class Assessor:
+class Processor:
     """Processes the product data for assessing its relevance."""
 
     _system_prompt = (
@@ -30,56 +29,6 @@ class Assessor:
         """
         self._client = AsyncOpenAI(api_key=api_key)
         self._model = model
-
-    @staticmethod
-    def _keep_product_country_code(product: dict, country_code: str) -> bool:
-        """Determines whether to keep the product based on the country_code.
-
-        Args:
-            product: A product data dictionary.
-            country_code: The country code used to filter the products.
-        """
-        url = product.get("url", "")
-        return (
-            f".{country_code}/" in url.lower()
-            or url.lower().endswith(f".{country_code}")
-            or ".com" in url.lower()
-        )
-    
-    def _keep_product_probability(self, product: dict, threshold: str) -> bool:
-        """Determines whether to keep the product based on the probability threshold.
-
-        Args:
-            product: A product data dictionary.
-            threshold: The Zyte probability threshold used to filter the products.
-        """
-        try:
-            prob = product['product']['metadata']['probability']
-        except KeyError:
-            logger.warning(f"Product with url={product.get('url')} has no probability value - product is ignored")
-            return False
-        return prob > threshold
-
-    def keep_product(self, product: dict, country_code: str, threshold: float) -> bool:
-        """Determines whether to keep the product or filter it out.
-
-        This method applies two different filters:
-            - The product URL must match the country code.
-            - The Zyte probability must be above the threshold
-
-        Args:
-            product: A product data dictionary.
-            country_code: The country code used to filter the products.
-            threshold: The probability threshold used to filter the products.
-        """
-        url = product['url']
-        if not self._keep_product_country_code(product=product, country_code=country_code):
-            logger.debug(f'Product with url="{url}" does not match country_code.')
-            return False
-        elif not self._keep_product_probability(product=product, threshold=threshold):
-            logger.debug(f'Product with url="{url}" does not meet probability threshold.')
-            return False
-        return True
 
     def _handle_missing_fields(self, product: Dict[str, Any], field: str) -> Dict[str, Any]:
         if field not in product["product"]:

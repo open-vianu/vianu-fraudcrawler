@@ -73,3 +73,18 @@ class ZyteApi(AsyncClient):
                 await asyncio.sleep(self._retry_delay)
         if err is not None:
             raise err
+
+    @staticmethod
+    def keep_product(product: dict, threshold: str) -> bool:
+        """Determines whether to keep the product based on the probability threshold.
+
+        Args:
+            product: A product data dictionary.
+            threshold: The probability threshold used to filter the products.
+        """
+        try:
+            prob = product['product']['metadata']['probability']
+        except KeyError:
+            logger.warning(f"Product with url={product.get('url')} has no probability value - product is ignored")
+            return False
+        return prob > threshold

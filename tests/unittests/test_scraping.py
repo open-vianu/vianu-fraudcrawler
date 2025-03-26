@@ -67,7 +67,7 @@ async def test_serpapi_apply_marketplaces(serpapi):
 
 
 @pytest.mark.asyncio
-async def test_serpapi_search_excluded_urls(serpapi):
+async def test_serpapi_apply_excluded_urls(serpapi):
     search_term = "sildenafil"
     location = Location(name="Switzerland", code="ch")
     excluded_urls = [Host(name="Altibbi", domains="altibbi.com")]
@@ -138,3 +138,17 @@ async def test_zyteapi_get_results(zyteapi):
     assert product.get("url") == url
     assert 'product' in product
     assert 'metadata' in product['product']
+
+def test_zyteapi_keep_product(zyteapi):
+    product = {
+        "url": "http://example.ch",
+        "product": {
+            "name": "sildenafil",
+            "description": "buy sildenafil online",
+            "metadata": {
+                "probability": 0.5
+            }
+        }
+    }
+    assert zyteapi.keep_product(product=product, threshold=0.1) is True
+    assert zyteapi.keep_product(product=product, threshold=0.6) is False

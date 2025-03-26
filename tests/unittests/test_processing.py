@@ -2,12 +2,12 @@ import pytest
 
 from fraudcrawler.base.settings import PROCESSOR_MODEL
 from fraudcrawler.base.base import Setup
-from fraudcrawler import Assessor
+from fraudcrawler import Processor
 
 @pytest.fixture
 def processor():
     setup = Setup()
-    processor = Assessor(api_key=setup.openaiapi_key, model=PROCESSOR_MODEL)
+    processor = Processor(api_key=setup.openaiapi_key, model=PROCESSOR_MODEL)
     return processor
 
 @pytest.mark.asyncio

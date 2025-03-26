@@ -5,7 +5,7 @@ from typing import Dict, List, Set
 
 from fraudcrawler.base.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY, N_SERP_WKRS, N_ZYTE_WKRS, N_PROC_WKRS
 from fraudcrawler.base.base import Deepness, Host, Language, Location
-from fraudcrawler import SerpApi, Enricher, ZyteApi, Assessor
+from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class Orchestrator(ABC):
         self._serpapi = SerpApi(api_key=serpapi_key, max_retries=max_retries, retry_delay=retry_delay)
         self._enricher = Enricher(user=dataforseo_user, pwd=dataforseo_pwd)
         self._zyteapi = ZyteApi(api_key=zyteapi_key, max_retries=max_retries, retry_delay=retry_delay)
-        self._processor = Assessor(api_key=openaiapi_key, model=openai_model)
+        self._processor = Processor(api_key=openaiapi_key, model=openai_model)
 
         # Setup the async framework
         self._n_serp_wkrs = n_serp_wkrs
@@ -65,7 +65,7 @@ class Orchestrator(ABC):
         self._workers: Dict[str, List[asyncio.Task] | asyncio.Task] | None = None
 
     async def _serp_execute(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue) -> None:
-        """Collects the SerpApi search setups from the queue_in, executes the search and puts the results into queue_out.
+        """Collects the SerpApi search setups from the queue_in, executes the search, filters the results (country_code) and puts them into queue_out.
 
         Args:
             queue_in: The input queue containing the search parameters.
@@ -78,7 +78,7 @@ class Orchestrator(ABC):
                 break
 
             try:
-                urls = await self._serpapi._search(**item)
+                urls = await self._serpapi.apply(**item)
                 for u in urls:
                     await queue_out.put(u)
             except Exception as e:
@@ -103,12 +103,13 @@ class Orchestrator(ABC):
                 await queue_out.put(url)
             queue_in.task_done()
 
-    async def _zyte_execute(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue) -> None:
-        """Collects the URLs from the queue_in, enriches it with product details metadata and puts the results into queue_out.
+    async def _zyte_execute(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue, threshold: float) -> None:
+        """Collects the URLs from the queue_in, enriches it with product details metadata, filters them (probability), and puts them into queue_out.
 
         Args:
             queue_in: The input queue containing URLs to fetch product details from.
             queue_out: The output queue to put the product details as dictionaries.
+            threshold: The probability threshold used to filter the products.
         """
         while True:
             url = await queue_in.get()
@@ -117,24 +118,23 @@ class Orchestrator(ABC):
                 break
 
             try:
-                product = await self._zyteapi.get_details(url=url)
-                await queue_out.put(product)
+                product = await self._zyteapi.apply(url=url)
+                if self._zyteapi.keep_product(product=product, threshold=threshold):
+                    await queue_out.put(product)
+                else:
+                    logger.debug(f'Product with url="{url}" does not meet probability threshold.')
             except Exception as e:
                 logger.warning(f"Error executing Zyte API search: {e}.")
             queue_in.task_done()
 
-    async def _proc_execute(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue, **kwargs) -> None:
+    async def _proc_execute(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue, context: str) -> None:
         """Collects the product details from the queue_in, processes them (filtering, relevance, etc.) and puts the results into queue_out.
         
         Args:
             queue_in: The input queue containing the product details.
             queue_out: The output queue to put the processed product details.
-            **kwargs: Additional keyword arguments for the processing step.
+            context: The context to use for the processing.
         """
-        # Get processing parameters
-        country_code = kwargs['country_code']   # The country code used to filter the products.
-        threshold = kwargs['threshold']         # The probability threshold used to filter the products.
-        context = kwargs['context']             # The context associated to the field of interest.
 
         # Process the products
         while True:
@@ -144,9 +144,8 @@ class Orchestrator(ABC):
                 break
 
             try:
-                if self._processor.keep_product(product=product, country_code=country_code, threshold=threshold):
-                    product = await self._processor.classify_product(product=product, context=context)
-                    await queue_out.put(product)
+                product = await self._processor.classify_product(product=product, context=context)
+                await queue_out.put(product)
             except Exception as e:
                 logger.warning(f"Error processing product: {e}.")
             queue_in.task_done()
