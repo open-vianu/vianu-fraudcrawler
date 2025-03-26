@@ -1,7 +1,7 @@
 import pytest
 
-from fraudcrawler.common.base import Setup, Keyword, Host, Location, Language
-from fraudcrawler.collect import SerpApi, Enricher
+from fraudcrawler.base.base import Setup, Keyword, Host, Location, Language
+from fraudcrawler.crawling import SerpApi, Enricher
 
 
 @pytest.fixture

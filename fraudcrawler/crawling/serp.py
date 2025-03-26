@@ -3,8 +3,8 @@ import logging
 from typing import List
 from urllib.parse import urlparse
 
-from fraudcrawler.common.settings import MAX_RETRIES, RETRY_DELAY
-from fraudcrawler.common.base import Host, Location, AsyncClient
+from fraudcrawler.base.settings import MAX_RETRIES, RETRY_DELAY
+from fraudcrawler.base.base import Host, Location, AsyncClient
 
 logger = logging.getLogger(__name__)
 

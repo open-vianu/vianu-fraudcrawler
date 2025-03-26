@@ -1,6 +1,6 @@
-from fraudcrawler.collect.serp import SerpApi
-from fraudcrawler.collect.enrich import Enricher
-from fraudcrawler.collect.zyte import ZyteApi
+from fraudcrawler.crawling.serp import SerpApi
+from fraudcrawler.crawling.enrich import Enricher
+from fraudcrawler.crawling.zyte import ZyteApi
 
 
 __all__ = [

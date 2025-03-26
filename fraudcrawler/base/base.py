@@ -90,3 +90,13 @@ class AsyncClient:
                 response.raise_for_status()
                 json_ = await response.json()
         return json_
+
+
+class Orchestrator:
+    """Orchestrates the different actors (collection, processing).
+
+    For each pipeline step it will deploy a number of async workers to handle the tasks. In addition
+    it makes sure to orchestrate the canceling of the workers only after the relevant workload is done.
+    """
+
+    def __init__(
