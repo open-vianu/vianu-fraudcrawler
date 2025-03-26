@@ -30,11 +30,11 @@ def zyteapi():
 
 @pytest.mark.asyncio
 async def test_serpapi_search(serpapi):
-    search_term = "sildenafil"
+    search_string = "sildenafil"
     location = Location(name="Switzerland", code="ch")
     num_results = 5
-    urls = await serpapi.search(
-        search_term=search_term,
+    urls = await serpapi._search(
+        search_string=search_string,
         location=location,
         num_results=num_results,
     )
@@ -43,13 +43,20 @@ async def test_serpapi_search(serpapi):
     assert all(url.startswith("http") for url in urls)
 
 
+def test_serpapi_keep_url(serpapi):
+    assert serpapi._keep_url(url="https://example.ch", country_code='ch') is True
+    assert serpapi._keep_url(url="https://example.ch/foobar", country_code='ch') is True
+    assert serpapi._keep_url(url="https://example.com", country_code='ch') is True
+    assert serpapi._keep_url(url="https://example.it", country_code='ch') is False
+
+
 @pytest.mark.asyncio
-async def test_serpapi_search_marketplaces(serpapi):
+async def test_serpapi_apply_marketplaces(serpapi):
     search_term = "sildenafil"
     location = Location(name="Switzerland", code="ch")
     marketplaces = [Host(name="Ricardo", domains="ricardo.ch")]
     num_results = 5
-    urls = await serpapi.search(
+    urls = await serpapi.apply(
         search_term=search_term,
         location=location,
         num_results=num_results,
@@ -65,7 +72,7 @@ async def test_serpapi_search_excluded_urls(serpapi):
     location = Location(name="Switzerland", code="ch")
     excluded_urls = [Host(name="Altibbi", domains="altibbi.com")]
     num_results = 5
-    urls = await serpapi.search(
+    urls = await serpapi.apply(
         search_term=search_term,
         location=location,
         num_results=num_results,

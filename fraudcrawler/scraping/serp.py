@@ -54,36 +54,25 @@ class SerpApi(AsyncClient):
 
         return hostname
 
-    async def search(
+    async def _search(
         self,
-        search_term: str,
+        search_string: str,
         location: Location,
         num_results: int,
-        marketplaces: List[Host] | None = None,
-        excluded_urls: List[Host] | None = None,
     ) -> List[str]:
         """Performs a search using SerpApi and returns the URLs of the results.
 
         Args:
-            search_term: The search term to use for the query.
+            search_string: The search string (with potentially added site: parameters).
             location: The location to use for the query.
             num_results: Max number of results to return (default: 10).
-            marketplaces: The marketplaces to include in the search.
-            excluded_urls: The URLs to exclude from the search.
         """
         # Setup the parameters
-        logger.info(f'Performing SerpAPI search for search_term="{search_term}".')
-
-        # Setup the parameters
-        #  - q: The search term (with potentially added site: parameters for marketplaces).
+        #  - q: The search string (with potentially added site: parameters).
         #  - location_[requested|used]: The location to use for the search.
         #  - google_domain: The Google domain to use for the search (e.g. google.[com]).
         #  - num: The number of results to return.
         #  - engine: The search engine to use ('google' NOT 'google_shopping').
-        search_string = search_term
-        if marketplaces:
-            sites = [dom for host in marketplaces for dom in host.domains]
-            search_string += " site:" + " OR site:".join(s for s in sites)
         params = {
             "q": search_string,
             "location_requested": location.name,
@@ -119,16 +108,63 @@ class SerpApi(AsyncClient):
         logger.debug(
             f'Found {len(urls)} URLs from SerpApi search for q="{search_string}".'
         )
+        return urls
+
+    @staticmethod
+    def _keep_url(url: str, country_code: str) -> bool:
+        """Determines whether to keep the url based on the country_code.
+
+        Args:
+            url: The URL to investigate.
+            country_code: The country code used to filter the products.
+        """
+        return (
+            f".{country_code}" in url.lower()
+            or ".com" in url.lower()   # TODO: do we want this in all cases
+        )
+    
+    async def apply(
+        self,
+        search_term: str,
+        location: Location,
+        num_results: int,
+        marketplaces: List[Host] | None = None,
+        excluded_urls: List[Host] | None = None,
+    ) -> List[str]:
+        """Performs a search using SerpApi, filters based on country code and returns the URLs.
+        
+        Args:
+            search_term: The search term to use for the query.
+            location: The location to use for the query.
+            num_results: Max number of results to return (default: 10).
+            marketplaces: The marketplaces to include in the search.
+            excluded_urls: The URLs to exclude from the search.
+        """
+        # Setup the parameters
+        logger.info(f'Performing SerpAPI search for search_term="{search_term}".')
+
+        # Setup the search string
+        search_string = search_term
+        if marketplaces:
+            sites = [dom for host in marketplaces for dom in host.domains]
+            search_string += " site:" + " OR site:".join(s for s in sites)
+        
+        # Perform the search
+        urls = await self._search(
+            search_string=search_string,
+            location=location,
+            num_results=num_results,
+        )
 
         # Filter out the excluded URLs
         if excluded_urls:
             excluded = [dom for excl in excluded_urls for dom in excl.domains]
             urls = [url for url in urls if self._get_hostname(url) not in excluded]
-            logger.debug(
-                f"Filtered down to {len(urls)} URLs after excluding given domains."
-            )
+
+        # Filter out the URLs not matching the country code
+        urls = [url for url in urls if self._keep_url(url, location.code)]
 
         logger.info(
-            f'Found {len(urls)} URLs from SerpApi search with q="{search_string}".'
+            f'Produced {len(urls)} URLs from SerpApi search with q="{search_string}".'
         )
         return urls

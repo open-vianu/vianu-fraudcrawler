@@ -7,8 +7,8 @@ from openai import AsyncOpenAI
 logger = logging.getLogger(__name__)
 
 
-class Processor:
-    """Processes the product data and applies specific filtering rules."""
+class Assessor:
+    """Processes the product data for assessing its relevance."""
 
     _system_prompt = (
         "You are a helpful and intelligent assistant. Your task is to classify any given product "
@@ -59,7 +59,6 @@ class Processor:
             logger.warning(f"Product with url={product.get('url')} has no probability value - product is ignored")
             return False
         return prob > threshold
-
 
     def keep_product(self, product: dict, country_code: str, threshold: float) -> bool:
         """Determines whether to keep the product or filter it out.

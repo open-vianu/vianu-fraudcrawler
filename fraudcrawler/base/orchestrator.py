@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 import asyncio
 import logging
-from typing import List, Set
+from typing import Dict, List, Set
 
 from fraudcrawler.base.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY, N_SERP_WKRS, N_ZYTE_WKRS, N_PROC_WKRS
-from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
+from fraudcrawler.base.base import Deepness, Host, Language, Location
+from fraudcrawler import SerpApi, Enricher, ZyteApi, Assessor
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,14 @@ class Orchestrator(ABC):
         self._serpapi = SerpApi(api_key=serpapi_key, max_retries=max_retries, retry_delay=retry_delay)
         self._enricher = Enricher(user=dataforseo_user, pwd=dataforseo_pwd)
         self._zyteapi = ZyteApi(api_key=zyteapi_key, max_retries=max_retries, retry_delay=retry_delay)
-        self._processor = Processor(api_key=openaiapi_key, model=openai_model)
+        self._processor = Assessor(api_key=openaiapi_key, model=openai_model)
+
+        # Setup the async framework
+        self._n_serp_wkrs = n_serp_wkrs
+        self._n_zyte_wkrs = n_zyte_wkrs
+        self._n_proc_wkrs = n_proc_wkrs
+        self._queues: Dict[str, asyncio.Queue] | None = None 
+        self._workers: Dict[str, List[asyncio.Task] | asyncio.Task] | None = None
 
     async def _serp_execute(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue) -> None:
         """Collects the SerpApi search setups from the queue_in, executes the search and puts the results into queue_out.
@@ -70,7 +78,7 @@ class Orchestrator(ABC):
                 break
 
             try:
-                urls = await self._serpapi.search(**item)
+                urls = await self._serpapi._search(**item)
                 for u in urls:
                     await queue_out.put(u)
             except Exception as e:
@@ -213,29 +221,73 @@ class Orchestrator(ABC):
                 self._proc_execute(
                     queue_in=proc_queue,
                     queue_out=res_queue,
-                    kwargs=kwargs,
+                    country_code=country_code,
+                    threshold=threshold,
+                    context=context,
                 )
             )
             for _ in range(n_proc_wkrs)
         ]
 
-        # Setup the collector worker
-        col_wkr = asyncio.create_task(self._collect(queue_in=res_queue))
+        # Setup the result collector
+        res_col = asyncio.create_task(self._collect_results(queue_in=res_queue))
 
         # Add the setup to the instance variables
         self._queues: Dict[str, asyncio.Queue] = {
+            "serp": serp_queue,
             "url": url_queue,
-            "det": det_queue,
+            "zyte": zyte_queue,
+            "proc": proc_queue,
             "res": res_queue,
         }
-        self._workers: Dict[str, List[asyncio.Task]] = {
+        self._workers: Dict[str, List[asyncio.Task] | asyncio.Task] = {
+            "serp": serp_wkrs,
+            "url": url_col,
             "zyte": zyte_wkrs,
             "proc": proc_wkrs,
-            "col": col_wkr,
+            "res": res_col,
         }
 
+    async def run(
+        self,
+        search_term: str,
+        language: Language,
+        location: Location,
+        deepness: Deepness,
+        marketplaces: List[Host] | None,
+        excluded_urls: List[Host] | None,
+        threshold: float,
+        context: str,
+    ) -> None:
+        """Runs the pipeline steps: serp, enrich, zyte, process, and collect the results.
+        
+        Args:
+            search_term: The search term for the query.
+            language: The language to use for the query.
+            location: The location to use for the query.
+            deepness: The search depth and enrichment details.
+            marketplaces: The marketplaces to include in the search.
+            excluded_urls: The URLs to exclude from the search.
+        """
+        # Setup the async framework
+        n_terms_max = 1 + deepness.enrichment.additional_terms if deepness.enrichment else 0
+        n_serp_wkrs = min(self._n_serp_wkrs, n_terms_max)
+        n_zyte_wkrs = min(self._n_zyte_wkrs, deepness.num_results)
+        n_proc_wkrs = min(self._n_proc_wkrs, deepness.num_results)
+        logger.debug(
+            f"setting up async framework (#workers: serp={n_serp_wkrs}, zyte={n_zyte_wkrs}, proc={n_proc_wkrs})"
+        )
+        self._setup_async_framework(
+            n_serp_wkrs=n_serp_wkrs,
+            n_zyte_wkrs=n_zyte_wkrs,
+            n_proc_wkrs=n_proc_wkrs,
+            country_code=location.code,
+            threshold=threshold,
+            context=language.code,
+        )
 
-        pass
+
+
 
 # TODO: put None for stopping url_collection also if no enrichment happens
 

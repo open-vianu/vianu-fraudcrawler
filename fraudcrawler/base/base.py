@@ -65,6 +65,20 @@ class Keyword(BaseModel):
     volume: int
 
 
+class Enrichment(BaseModel):
+    """Model for enrichment details."""
+
+    additional_terms: int
+    additional_urls_per_term: int
+
+
+class Deepness(BaseModel):
+    """Model for search depth."""
+
+    num_results: int
+    enrichment: Enrichment | None
+
+
 class AsyncClient:
     """Base class for sub-classes using async HTTP requests."""
 
