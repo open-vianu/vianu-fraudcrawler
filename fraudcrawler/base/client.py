@@ -54,6 +54,6 @@ class FraudCrawlerClient(Orchestrator):
         
         df = pd.DataFrame(products)
         today = datetime.today().strftime('%Y%m%d')
-        filename = f"products_{today}_{result.search_term}.csv"
+        filename = self._data_dir / f"products_{today}_{result.search_term}.csv"
         df.to_csv(filename, index=False)
         logger.info(f"Results saved to {filename}")
