@@ -320,7 +320,6 @@ class Orchestrator(ABC):
                     **common_kwargs,
                 )
 
-
     async def run(
         self,
         search_term: str,
@@ -342,6 +341,10 @@ class Orchestrator(ABC):
             marketplaces: The marketplaces to include in the search.
             excluded_urls: The URLs to exclude from the search.
         """
+
+        # ---------------------------
+        #        INITIAL SETUP
+        # ---------------------------
         # Setup the async framework
         n_terms_max = 1 + deepness.enrichment.additional_terms if deepness.enrichment else 0
         n_serp_wkrs = min(self._n_serp_wkrs, n_terms_max)
@@ -370,16 +373,105 @@ class Orchestrator(ABC):
             excluded_urls=excluded_urls,
         )
 
-        # TODO
-        # - continue from here
+
+        # ---------------------------
+        #   ORCHESTRATE SERP WORKERS
+        # ---------------------------
+        # Add the sentinels to the serp_queue
+        for _ in range(n_serp_wkrs):
+            await serp_queue.put(None)
+
+        # Wait for the serp workers to be concluded before adding the sentinels to the url_queue
+        serp_workers = self._workers["serp"]
+        try:
+            logger.debug('gathering and terminating serp_workers')
+            serp_res = await asyncio.gather(*serp_workers, return_exceptions=True)
+            for i, res in enumerate(serp_res):
+                if isinstance(res, Exception):
+                    logger.error(f"Error in serp_worker {i}: {res}")
+        except Exception as e:
+            logger.error(f"gathering serp_workers failed: {e}")
+        finally:
+            await serp_queue.join()
+        
+
+        # ---------------------------
+        #  ORCHESTRATE URL COLLECTOR
+        # ---------------------------
+        # Add the sentinels to the url_queue
+        url_queue = self._queues["url"]
+        await url_queue.put(None)
+
+        # Wait for the url_collector to be concluded before adding the sentinels to the zyte_queue
+        url_collector = self._workers["url"]
+        try:
+            logger.debug('gathering and terminating url_collector')
+            await url_collector
+        except Exception as e:
+            logger.error(f"gathering url_collector failed: {e}")
+        finally:
+            await url_queue.join()
 
 
+        # ---------------------------
+        #  ORCHESTRATE ZYTE WORKERS
+        # ---------------------------
+        # Add the sentinels to the zyte_queue
+        zyte_queue = self._queues["zyte"]
+        for _ in range(n_zyte_wkrs):
+            await zyte_queue.put(None)
 
+        # Wait for the zyte_workers to be concluded before adding the sentinels to the proc_queue
+        zyte_workers = self._workers["zyte"]
+        try:
+            logger.debug('gathering and terminating zyte_workers')
+            zyte_res = await asyncio.gather(*zyte_workers, return_exceptions=True)
+            for i, res in enumerate(zyte_res):
+                if isinstance(res, Exception):
+                    logger.error(f"Error in zyte_worker {i}: {res}")
+        except Exception as e:
+            logger.error(f"gathering zyte_workers failed: {e}")
+        finally:
+            await zyte_queue.join()
+        
 
+        # ---------------------------
+        #  ORCHESTRATE PROC WORKERS
+        # ---------------------------
+        # Add the sentinels to the proc_queue
+        proc_queue = self._queues["proc"]
+        for _ in range(n_proc_wkrs):
+            await proc_queue.put(None)
 
+        # Wait for the proc_workers to be concluded before adding the sentinels to the res_queue
+        proc_workers = self._workers["proc"]
+        try:
+            logger.debug('gathering and terminating proc_workers')
+            proc_res = await asyncio.gather(*proc_workers, return_exceptions=True)
+            for i, res in enumerate(proc_res):
+                if isinstance(res, Exception):
+                    logger.error(f"Error in proc_worker {i}: {res}")
+        except Exception as e:
+            logger.error(f"gathering proc_workers failed: {e}")
+        finally:
+            await proc_queue.join()
+        
 
+        # ---------------------------
+        #  ORCHESTRATE RES COLLECTOR
+        # ---------------------------
+        # Add the sentinels to the res_queue
+        res_queue = self._queues["res"]
+        await res_queue.put(None)
 
-# Filter additional search terms
-# TODO: put None for stopping url_collection also if no enrichment happens
+        # Wait for the res_collector to be concluded
+        res_collector = self._workers["res"]
+        try:
+            logger.debug('gathering and terminating res_collector')
+            await res_collector
+        except Exception as e:
+            logger.error(f"gathering res_collector failed: {e}")
+        finally:
+            await res_queue.join()
 
-
+        logger.info("pipeline concluded; async framework is closed")
