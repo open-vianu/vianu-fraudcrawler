@@ -127,6 +127,7 @@ async def test_enricher_apply(enricher):
         n_terms=n_terms,
     )
     assert len(terms) == n_terms
+    assert search_term not in terms
     assert all(isinstance(t, str) for t in terms)
 
 

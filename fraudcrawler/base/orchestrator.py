@@ -285,17 +285,20 @@ class Orchestrator(ABC):
         marketplaces: List[Host] | None,
         excluded_urls: List[Host] | None,
     ) -> None:
-        """Adds all the (enriched) search terms items to the queue."""
+        """Adds all the (enriched) search_term (as serp items) to the queue."""
+        common_kwargs = {
+            'queue': queue,
+            'language': language,
+            'location': location,
+            'marketplaces': marketplaces,
+            'excluded_urls': excluded_urls,
+        }
             
         # Add initial items to the serp_queue
         await self._add_serp_items_for_search_term(
-            queue=queue,
             search_term=search_term,
-            language=language,
-            location=location,
             num_results=deepness.num_results,
-            marketplaces=marketplaces,
-            excluded_urls=excluded_urls,
+            **common_kwargs,
         )
 
         # Enrich the search_terms
@@ -312,13 +315,9 @@ class Orchestrator(ABC):
             # Add the enriched search terms to the serp_queue
             for trm in terms:
                 self._add_serp_items_for_search_term(
-                    queue=queue,
                     search_term=trm,
-                    language=language,
-                    location=location,
-                    deepness=deepness,
-                    marketplaces=marketplaces,
-                    excluded_urls=excluded_urls,
+                    num_results=enrichment.additional_urls_per_term,
+                    **common_kwargs,
                 )
 
 
@@ -359,10 +358,6 @@ class Orchestrator(ABC):
             context=context,
         )
 
-        # TODO
-        # - continue from here
-        # - check the enrichement and its TODOs
-
         # Add the search terms to the serp_queue
         serp_queue = self._queues["serp"]
         await self._add_serp_items(
@@ -374,6 +369,9 @@ class Orchestrator(ABC):
             marketplaces=marketplaces,
             excluded_urls=excluded_urls,
         )
+
+        # TODO
+        # - continue from here
 
 
 

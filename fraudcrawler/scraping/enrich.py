@@ -1,6 +1,7 @@
 from base64 import b64encode
+from collections import defaultdict
 import logging
-from typing import List, Iterator
+from typing import Dict, List, Iterator
 
 from fraudcrawler.base.settings import ENRICHMENT_UPPER_LIMIT
 from fraudcrawler.base.base import Location, Language, Keyword, AsyncClient
@@ -263,7 +264,6 @@ class Enricher(AsyncClient):
             n_terms: The number of additional terms
         """
         # Get the additional keywords
-
         logger.info(
             f'Applying enrichment for search_term="{search_term}" and n_terms="{n_terms}".'
         )
@@ -280,21 +280,16 @@ class Enricher(AsyncClient):
             limit=n_terms,
         )
 
-        # TODO continue from here
-        #  - filter out the blacklisted search terms (c.f. utils)
-        #  - aggregate the keywords (sum the volumes for duplicates)
-        #    Q: WHY ARE THE KEYWORDS OF DIFFERENT LANGUAGES AND LOCATIONS IN THE OLD VERSION???
-        #  - sort the keywords by volume
-        #  - search for the terms with SerpApi
-        #  - aggregate the urls (sum the volumes for duplicates)
-        #    Q: IS THIS REALLY NECESSARY? WHY NOT JUST RETURN THE URLS?
+        # Remove original keyword and aggregate them by volume
+        keywords = [kw for kw in suggested + related if kw.text != search_term]
+        kw_vol: Dict[str, int] = defaultdict(int)
+        for kw in keywords:
+            kw_vol[kw.text] = max(kw.volume, kw_vol[kw.text])
+        keywords = [Keyword(text=k, volume=v) for k, v in kw_vol.items()]
+        logger.debug(f"Found {len(keywords)} additional unique keywords.")
 
-        # TODO
-        #  - use Location and Language models
-
-        # Combine the keywords and sort them by volume
-        keywords = suggested + related
+        # Sort the keywords by volume and get the top n_terms
         keywords = sorted(keywords, key=lambda kw: kw.volume, reverse=True)
         terms = [kw.text for kw in keywords[:n_terms]]
-        logger.info(f"Found {len(terms)} additional terms.")
+        logger.info(f"Produced {len(terms)} additional search_terms.")
         return terms
