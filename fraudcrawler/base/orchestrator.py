@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import asyncio
 import logging
+from pydantic import BaseModel
 from typing import Dict, List, Set
 
 from fraudcrawler.base.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY, N_SERP_WKRS, N_ZYTE_WKRS, N_PROC_WKRS
@@ -8,6 +9,28 @@ from fraudcrawler.base.base import Deepness, Host, Language, Location
 from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
 
 logger = logging.getLogger(__name__)
+
+
+class QueueItem(BaseModel):
+    """Model for queue items."""
+    # Serp/Enrich parameters
+    search_term: str
+    search_term_type: str       # 'initial' or 'enriched'
+    num_results: int
+    location: Location
+    language: Language | None = None
+    marketplaces: List[Host] | None = None
+    excluded_urls: List[Host] | None = None
+    url: str | None
+
+    # Zyte parameters
+    product_name: str | None
+    product_price: str | None
+    product_description: str | None
+    product_probability: float | None = None
+
+    # Processor parameters
+    is_relevant: int | None
 
 
 class Orchestrator(ABC):
@@ -63,6 +86,15 @@ class Orchestrator(ABC):
         self._n_proc_wkrs = n_proc_wkrs
         self._queues: Dict[str, asyncio.Queue] | None = None 
         self._workers: Dict[str, List[asyncio.Task] | asyncio.Task] | None = None
+
+    @abstractmethod
+    async def _collect_results(self, queue_in: asyncio.Queue) -> None:
+        """Collects the results from the given queue_in.
+
+        Args:
+            queue_in: The input queue containing the results.
+        """
+        pass
 
     async def _serp_execute(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue) -> None:
         """Collects the SerpApi search setups from the queue_in, executes the search, filters the results (country_code) and puts them into queue_out.
@@ -149,17 +181,6 @@ class Orchestrator(ABC):
             except Exception as e:
                 logger.warning(f"Error processing product: {e}.")
             queue_in.task_done()
-
-
-    @abstractmethod
-    async def _collect_results(self, queue_in: asyncio.Queue) -> None:
-        """Collects the results from the given queue_in.
-
-        Args:
-            queue_in: The input queue containing the results.
-        """
-        pass
-
 
     def _setup_async_framework(
             self,

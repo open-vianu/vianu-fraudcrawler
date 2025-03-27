@@ -47,6 +47,24 @@ class ZyteApi(AsyncClient):
 
         Args:
             url: The URL to fetch product details from.
+        
+        Returns:
+            A dictionary containing the product details, fields include:
+            (c.f. https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/response/200/product)
+            {
+                "url": str,
+                "statusCode": str,
+                "product": {
+                    "name": str,
+                    "price": str,
+                    "mainImage": {"url": str},
+                    "images": [{"url": str}],
+                    "description": str,
+                    "metadata": {
+                        "probability": float,
+                    },
+                }
+            }
         """
         logger.info(f"Fetching product details by Zyte for URL {url}.")
         attempts = 0
@@ -61,7 +79,6 @@ class ZyteApi(AsyncClient):
                     data={"url": url, **self._config},
                     auth=self._aiohttp_basic_auth,
                 )
-                product["url"] = url
                 return product
             except Exception as e:
                 logger.debug(

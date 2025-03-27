@@ -132,7 +132,7 @@ async def test_enricher_apply(enricher):
 
 
 @pytest.mark.asyncio
-async def test_zyteapi_get_results(zyteapi):
+async def test_zyteapi_get_details(zyteapi):
     url = "https://www.altibbi.com/answer/159"
     product = await zyteapi.get_details(url=url)
     assert product
