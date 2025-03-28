@@ -6,7 +6,7 @@ from fraudcrawler.base.base import Setup, Host, Location, Language
 logging.basicConfig(level=LOG_LVL.upper(), format=LOG_FMT)
 logger = logging.getLogger(__name__)
 
-
+    
 def test_setup():
     setup = Setup()
     assert setup.serpapi_key
@@ -14,7 +14,6 @@ def test_setup():
     assert setup.dataforseo_pwd
     assert setup.zyteapi_key
     assert setup.openaiapi_key
-
 
 def test_host():
     host = Host(name="Galaxus", domains="galaxus.ch, digitec.ch,example.com")
@@ -25,7 +24,6 @@ def test_host():
     assert host.name == "Galaxus"
     assert host.domains == ["galaxus.ch", "digitec.ch", "example.com"]
 
-
 def test_location():
     location = Location(name="Switzerland", code="ch")
     assert location.name == "Switzerland"
@@ -35,6 +33,9 @@ def test_location():
     assert location.name == "switzerland"
     assert location.code == "ch"
 
+    location = Location(name="Switzerland")
+    assert location.name == "Switzerland"
+    assert location.code == "ch"
 
 def test_language():
     language = Language(name="German", code="de")
@@ -43,4 +44,8 @@ def test_language():
 
     language = Language(name="german", code="DE")
     assert language.name == "german"
+    assert language.code == "de"
+
+    language = Language(name="German")
+    assert language.name == "German"
     assert language.code == "de"

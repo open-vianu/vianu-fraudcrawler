@@ -1,13 +1,25 @@
+import json
 import logging
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 from pydantic_settings import BaseSettings
 from typing import List
 
 import aiohttp
 
+from fraudcrawler.base.settings import GOOGLE_LANGUAGES_FILENAME, GOOGLE_LOCATIONS_FILENAME
+
 logger = logging.getLogger(__name__)
 
+# Load google locations and languages
+with open(GOOGLE_LOCATIONS_FILENAME, "r") as gfile:
+    _locs = json.load(gfile)
+_LOCATION_CODES = {loc["name"]: loc["country_code"].lower() for loc in _locs}
+with open(GOOGLE_LANGUAGES_FILENAME, "r") as gfile:
+    _langs = json.load(gfile)
+_LANGUAGE_CODES = {lang["language_name"]: lang["language_code"] for lang in _langs}
 
+
+# Base classes
 class Setup(BaseSettings):
     """Class for loading environment variables."""
 
@@ -40,29 +52,39 @@ class Location(BaseModel):
     """Model for location details (e.g. `Location(name="Switzerland", code="ch")`)."""
 
     name: str
-    code: str
+    code: str | None = None
 
-    @field_validator("code", mode="before")
-    def lower_code(cls, val):
-        return val.lower()
+    @model_validator(mode="before")
+    def set_code(cls, values):
+        """Set the location code if not provided and make it lower case."""
+        name = values.get("name")
+        code = values.get("code")
+        if code is None:
+            code = _LOCATION_CODES.get(name)
+            if code is None:
+                raise ValueError(f'Location code not found for location name="{name}"')
+        code = code.lower()
+        return {"name": name, "code": code}
 
 
 class Language(BaseModel):
     """Model for language details (e.g. `Language(name="German", code="de")`)."""
 
     name: str
-    code: str
+    code: str | None = None
 
-    @field_validator("code", mode="before")
-    def lower_code(cls, val):
-        return val.lower()
+    @model_validator(mode="before")
+    def set_code(cls, values):
+        """Set the language code if not provided and make it lower case."""
+        name = values.get("name")
+        code = values.get("code")
+        if code is None:
+            code = _LANGUAGE_CODES.get(name)
+            if code is None:
+                raise ValueError(f'Language code not found for language name="{name}"')
+        code = code.lower()
+        return {"name": name, "code": code}
 
-
-class Keyword(BaseModel):
-    """Model for keyword details (e.g. `Keyword(text="sildenafil", volume=100)`)."""
-
-    text: str
-    volume: int
 
 
 class Enrichment(BaseModel):
@@ -76,7 +98,7 @@ class Deepness(BaseModel):
     """Model for search depth."""
 
     num_results: int
-    enrichment: Enrichment | None
+    enrichment: Enrichment | None = None
 
 
 class AsyncClient:

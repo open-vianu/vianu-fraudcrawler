@@ -1,5 +1,4 @@
 import logging
-from typing import Dict, Any
 
 from openai import AsyncOpenAI
 

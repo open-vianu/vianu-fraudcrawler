@@ -1,13 +1,22 @@
 from base64 import b64encode
 from collections import defaultdict
 import logging
+from pydantic import BaseModel
 from typing import Dict, List, Iterator
 
 from fraudcrawler.base.settings import ENRICHMENT_UPPER_LIMIT
-from fraudcrawler.base.base import Location, Language, Keyword, AsyncClient
+from fraudcrawler.base.base import Location, Language, AsyncClient
 
 
 logger = logging.getLogger(__name__)
+
+
+class Keyword(BaseModel):
+    """Model for keyword details (e.g. `Keyword(text="sildenafil", volume=100)`)."""
+
+    text: str
+    volume: int
+
 
 
 class Enricher(AsyncClient):

@@ -17,6 +17,7 @@ repository = "https://github/open-vianu/vianu-fraudcrawler"
 packages = [
     {include = "fraudcrawler", from = "."},
     {include = "docs/assets/images/*", from = "."},
+    {include = "data/google/*", from = "."},
 ]
 
 [tool.setuptools.package-data]

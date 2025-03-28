@@ -4,7 +4,8 @@ import logging
 from pydantic import BaseModel
 from typing import Dict, List, Set
 
-from fraudcrawler.base.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY, N_SERP_WKRS, N_ZYTE_WKRS, N_PROC_WKRS
+from fraudcrawler.base.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY, ZYTE_PROBABILITY_THRESHOLD
+from fraudcrawler.base.settings import N_SERP_WKRS, N_ZYTE_WKRS, N_PROC_WKRS
 from fraudcrawler.base.base import Deepness, Host, Language, Location
 from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
 
@@ -17,6 +18,7 @@ class ProductItem(BaseModel):
     search_term: str
     search_term_type: str
     url: str
+    marketplace_name: str
 
     # Zyte parameters
     product_name: str | None
@@ -106,12 +108,13 @@ class Orchestrator(ABC):
 
             try:
                 search_term_type = item.pop('search_term_type')
-                urls = await self._serpapi.apply(**item)
-                for url in urls:
+                results = await self._serpapi.apply(**item)
+                for res in results:
                     product = ProductItem(
                         search_term=item['search_term'],
                         search_term_type=search_term_type,
-                        url=url,
+                        url=res.url,
+                        marketplace_name=res.marketplace_name,
                     )
                     await queue_out.put(product)
             except Exception as e:
@@ -137,13 +140,12 @@ class Orchestrator(ABC):
                 await queue_out.put(product)
             queue_in.task_done()
 
-    async def _zyte_execute(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue, threshold: float) -> None:
+    async def _zyte_execute(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue) -> None:
         """Collects the URLs from the queue_in, enriches it with product details metadata, filters them (probability), and puts them into queue_out.
 
         Args:
             queue_in: The input queue containing URLs to fetch product details from.
             queue_out: The output queue to put the product details as dictionaries.
-            threshold: The probability threshold used to filter the products.
         """
         while True:
             product = await queue_in.get()
@@ -153,7 +155,7 @@ class Orchestrator(ABC):
 
             try:
                 details = await self._zyteapi.get_details(url=product.url)
-                if self._zyteapi.keep_product(details=details, threshold=threshold):
+                if self._zyteapi.keep_product(details=details):
                     product.product_name = details['product'].get('name')
                     product.product_price = details['product'].get('price')
                     product.product_description = details['product'].get('description')
@@ -199,7 +201,6 @@ class Orchestrator(ABC):
             n_serp_wkrs: int,
             n_zyte_wkrs: int,
             n_proc_wkrs: int,
-            threshold: float,
             context: str,
         ) -> List[asyncio.Queue]:
         """Sets up the necessary queues and workers for the async framework.
@@ -208,9 +209,7 @@ class Orchestrator(ABC):
             n_serp_wkrs: Number of async workers for serp.
             n_zyte_wkrs: Number of async workers for zyte.
             n_proc_wkrs: Number of async workers for processor.
-            threshold: The probability threshold used to filter the products (func:`ZyteApi.keep_product`).
             context: The context used by the LLM for determining if a product is suspicious (func:`Processor.classify_product`).
-
         """
 
         # Setup the input/output queues for the workers
@@ -240,7 +239,6 @@ class Orchestrator(ABC):
                 self._zyte_execute(
                     queue_in=zyte_queue,
                     queue_out=proc_queue,
-                    threshold=threshold,
                 )
             )
             for _ in range(n_zyte_wkrs)
@@ -288,28 +286,18 @@ class Orchestrator(ABC):
         marketplaces: List[Host] | None,
         excluded_urls: List[Host] | None,
     ) -> None:
-        """Adds one (plus one if marketplaces are given) item to the queue."""
-        # Add item without marketplaces
+        """Adds a search-item to the queue."""
         item = {
             'search_term': search_term,
             'search_term_type': search_term_type,
             'location': location,
             'language': language,
             'num_results': num_results,
-            'marketplaces': None,
+            'marketplaces': marketplaces,
             'excluded_urls': excluded_urls,
         }
         logger.debug(f'Adding item="{item}" to serp_queue')
         await queue.put(item)
-
-        # Add item with marketplaces
-        if marketplaces:
-            item = {
-                **item,
-                'marketplaces': marketplaces,
-            }
-            logger.debug(f'Adding item="{str(item)}" to serp_queue')
-            await queue.put(item)
 
     async def _add_serp_items(
         self,
@@ -365,10 +353,9 @@ class Orchestrator(ABC):
         language: Language,
         location: Location,
         deepness: Deepness,
-        marketplaces: List[Host] | None,
-        excluded_urls: List[Host] | None,
-        threshold: float,
         context: str,
+        marketplaces: List[Host] | None = None,
+        excluded_urls: List[Host] | None = None,
     ) -> None:
         """Runs the pipeline steps: serp, enrich, zyte, process, and collect the results.
         
@@ -379,6 +366,7 @@ class Orchestrator(ABC):
             deepness: The search depth and enrichment details.
             marketplaces: The marketplaces to include in the search.
             excluded_urls: The URLs to exclude from the search.
+            context: The context prompt to use for detecting relevant product.
         """
 
         # ---------------------------
@@ -396,7 +384,6 @@ class Orchestrator(ABC):
             n_serp_wkrs=n_serp_wkrs,
             n_zyte_wkrs=n_zyte_wkrs,
             n_proc_wkrs=n_proc_wkrs,
-            threshold=threshold,
             context=context,
         )
 

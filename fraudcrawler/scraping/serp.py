@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from pydantic import BaseModel
 from typing import List
 from urllib.parse import urlparse
 
@@ -9,11 +10,21 @@ from fraudcrawler.base.base import Host, Location, AsyncClient
 logger = logging.getLogger(__name__)
 
 
+class SerpResult(BaseModel):
+    """Model for a single search result from SerpApi."""
+    
+    url: str
+    domain: str | None
+    marketplace_name: str
+
+
+
 class SerpApi(AsyncClient):
     """A client to interact with the SerpApi for performing searches."""
 
     _endpoint = "https://serpapi.com/search"
     _engine = "google"
+    _default_marketplace_name = "Google"
 
     def __init__(
         self,
@@ -34,8 +45,8 @@ class SerpApi(AsyncClient):
         self._retry_delay = retry_delay
 
     @staticmethod
-    def _get_hostname(url: str) -> str | None:
-        """Extracts the hostname together with the top-level domain in the form `hostname.tld.
+    def _get_domain(url: str) -> str | None:
+        """Extracts the second-level domain together with the top-level domain (e.g. `google.com`).
 
         Args:
             url: The URL to be processed.
@@ -45,14 +56,13 @@ class SerpApi(AsyncClient):
         if not url.startswith(("http://", "https://")):
             url = "http://" + url
 
-        # Get the hostname
+        # Get the hostname without the 'www' subdomain
         hostname = urlparse(url).hostname
-
-        # Remove 'www' subdomain
         if hostname and hostname.startswith("www."):
-            hostname = hostname[4:]
-
-        return hostname
+            return hostname[4:]
+        
+        logger.warning(f'Failed to extract domain from url="{url}"')
+        return None
 
     async def _search(
         self,
@@ -120,9 +130,29 @@ class SerpApi(AsyncClient):
         """
         return (
             f".{country_code}" in url.lower()
-            or ".com" in url.lower()   # TODO: do we want this in all cases
+            or ".com" in url.lower()
         )
-    
+
+    def _create_serp_result(self, url: str, marketplaces: List[Host] | None) -> SerpResult:
+        """From a given url it creates the class:`SerpResult` instance.
+
+        If marketplaces is None or the domain can not be extracted, the default marketplace name is used.
+
+        Args:
+            url: The URL to be processed.
+            marketplaces: The list of marketplaces to compare the URL against.
+        """
+        domain = self._get_domain(url)
+        marketplace_name = self._default_marketplace_name
+        if domain and marketplaces:
+            try:
+                marketplace_name = next(
+                    mp.name for mp in marketplaces if domain in mp.domains
+                )
+            except StopIteration:
+                logger.warning(f'Failed to find marketplace for domain="{domain}".')
+        return SerpResult(url=url, domain=domain, marketplace_name=marketplace_name)
+
     async def apply(
         self,
         search_term: str,
@@ -130,7 +160,7 @@ class SerpApi(AsyncClient):
         num_results: int,
         marketplaces: List[Host] | None = None,
         excluded_urls: List[Host] | None = None,
-    ) -> List[str]:
+    ) -> List[SerpResult]:
         """Performs a search using SerpApi, filters based on country code and returns the URLs.
         
         Args:
@@ -156,15 +186,18 @@ class SerpApi(AsyncClient):
             num_results=num_results,
         )
 
-        # Filter out the excluded URLs
-        if excluded_urls:
-            excluded = [dom for excl in excluded_urls for dom in excl.domains]
-            urls = [url for url in urls if self._get_hostname(url) not in excluded]
-
         # Filter out the URLs not matching the country code
         urls = [url for url in urls if self._keep_url(url, location.code)]
 
+        # Form the SerpResult objects
+        results = [self._create_serp_result(url, marketplaces) for url in urls]
+
+        # Filter out the excluded URLs
+        if excluded_urls:
+            excluded = [dom for excl in excluded_urls for dom in excl.domains]
+            results = [res for res in results if res.domain not in excluded]
+
         logger.info(
-            f'Produced {len(urls)} URLs from SerpApi search with q="{search_string}".'
+            f'Produced {len(results)} results from SerpApi search with q="{search_string}".'
         )
-        return urls
+        return results

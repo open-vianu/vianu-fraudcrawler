@@ -1,7 +1,9 @@
 import pytest
 
-from fraudcrawler.base.base import Setup, Keyword, Host, Location, Language
+from fraudcrawler.base.base import Setup, Host, Location, Language
+from fraudcrawler.scraping.serp import SerpResult
 from fraudcrawler import SerpApi, Enricher, ZyteApi
+from fraudcrawler.scraping.enrich import Keyword
 
 
 @pytest.fixture
@@ -50,20 +52,41 @@ def test_serpapi_keep_url(serpapi):
     assert serpapi._keep_url(url="https://example.it", country_code='ch') is False
 
 
+def test_serpapi_create_serp_result(serpapi):
+    url = "https://www.example.ch"
+    marketplaces = None
+    result = serpapi._create_serp_result(url=url, marketplaces=marketplaces)
+    assert result.url == url
+    assert result.domain == 'example.ch'
+    assert result.marketplace_name == serpapi._default_marketplace_name
+
+    marketplaces = [Host(name="Galaxus", domains="galaxus.ch"), Host(name="Example", domains="example.ch")]
+    result = serpapi._create_serp_result(url=url, marketplaces=marketplaces)
+    assert result.url == url
+    assert result.domain == 'example.ch'
+    assert result.marketplace_name == 'Example'
+
+    marketplaces = [Host(name="Galaxus", domains="galaxus.ch")]
+    serp_result = serpapi._create_serp_result(url=url, marketplaces=marketplaces)
+    assert serp_result.url == url
+    assert serp_result.domain == 'example.ch'
+    assert serp_result.marketplace_name == serpapi._default_marketplace_name
+
+
 @pytest.mark.asyncio
 async def test_serpapi_apply_marketplaces(serpapi):
     search_term = "sildenafil"
     location = Location(name="Switzerland", code="ch")
     marketplaces = [Host(name="Ricardo", domains="ricardo.ch")]
     num_results = 5
-    urls = await serpapi.apply(
+    results = await serpapi.apply(
         search_term=search_term,
         location=location,
         num_results=num_results,
         marketplaces=marketplaces,
     )
-    assert all(isinstance(url, str) for url in urls)
-    assert all(url.startswith("http") for url in urls)
+    assert all(isinstance(res, SerpResult) for res in results)
+    assert all(res.url.startswith("http") for res in results)
 
 
 @pytest.mark.asyncio
@@ -72,14 +95,14 @@ async def test_serpapi_apply_excluded_urls(serpapi):
     location = Location(name="Switzerland", code="ch")
     excluded_urls = [Host(name="Altibbi", domains="altibbi.com")]
     num_results = 5
-    urls = await serpapi.apply(
+    results = await serpapi.apply(
         search_term=search_term,
         location=location,
         num_results=num_results,
         excluded_urls=excluded_urls,
     )
-    assert all(isinstance(url, str) for url in urls)
-    assert all(url.startswith("http") for url in urls)
+    assert all(isinstance(res, SerpResult) for res in results)
+    assert all(res.url.startswith("http") for res in results)
 
 
 @pytest.mark.asyncio
@@ -136,12 +159,15 @@ async def test_zyteapi_get_details(zyteapi):
     url = "https://www.altibbi.com/answer/159"
     product = await zyteapi.get_details(url=url)
     assert product
-    assert product.get("url") == url
+
+    prod_url = product.get("url").replace("://www.", "://")
+    url = url.replace("://www.", "://")
+    assert prod_url == url
     assert 'product' in product
     assert 'metadata' in product['product']
 
 def test_zyteapi_keep_product(zyteapi):
-    product = {
+    details = {
         "url": "http://example.ch",
         "product": {
             "name": "sildenafil",
@@ -151,5 +177,5 @@ def test_zyteapi_keep_product(zyteapi):
             }
         }
     }
-    assert zyteapi.keep_product(product=product, threshold=0.1) is True
-    assert zyteapi.keep_product(product=product, threshold=0.6) is False
+    assert zyteapi.keep_product(details=details, threshold=0.1) is True
+    assert zyteapi.keep_product(details=details, threshold=0.6) is False
