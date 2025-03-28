@@ -11,23 +11,18 @@ from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
 logger = logging.getLogger(__name__)
 
 
-class QueueItem(BaseModel):
-    """Model for queue items."""
+class ProductItem(BaseModel):
+    """Model representing a product item."""
     # Serp/Enrich parameters
     search_term: str
-    search_term_type: str       # 'initial' or 'enriched'
-    num_results: int
-    location: Location
-    language: Language | None = None
-    marketplaces: List[Host] | None = None
-    excluded_urls: List[Host] | None = None
-    url: str | None
+    search_term_type: str
+    url: str
 
     # Zyte parameters
     product_name: str | None
     product_price: str | None
     product_description: str | None
-    product_probability: float | None = None
+    probability: float | None = None
 
     # Processor parameters
     is_relevant: int | None
@@ -110,9 +105,15 @@ class Orchestrator(ABC):
                 break
 
             try:
+                search_term_type = item.pop('search_term_type')
                 urls = await self._serpapi.apply(**item)
-                for u in urls:
-                    await queue_out.put(u)
+                for url in urls:
+                    product = ProductItem(
+                        search_term=item['search_term'],
+                        search_term_type=search_term_type,
+                        url=url,
+                    )
+                    await queue_out.put(product)
             except Exception as e:
                 logger.error(f"Error executing SERP API search: {e}")
             queue_in.task_done()
@@ -125,14 +126,15 @@ class Orchestrator(ABC):
             queue_out: The output queue to put the URLs.
         """
         while True:
-            url = await queue_in.get()
-            if url is None:
+            product = await queue_in.get()
+            if product is None:
                 queue_in.task_done()
                 break
 
+            url = product.url
             if url not in self._collected_urls:
                 self._collected_urls.add(url)
-                await queue_out.put(url)
+                await queue_out.put(product)
             queue_in.task_done()
 
     async def _zyte_execute(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue, threshold: float) -> None:
@@ -144,17 +146,21 @@ class Orchestrator(ABC):
             threshold: The probability threshold used to filter the products.
         """
         while True:
-            url = await queue_in.get()
-            if url is None:
+            product = await queue_in.get()
+            if product is None:
                 queue_in.task_done()
                 break
 
             try:
-                product = await self._zyteapi.get_details(url=url)
-                if self._zyteapi.keep_product(product=product, threshold=threshold):
+                details = await self._zyteapi.get_details(url=product.url)
+                if self._zyteapi.keep_product(details=details, threshold=threshold):
+                    product.product_name = details['product'].get('name')
+                    product.product_price = details['product'].get('price')
+                    product.product_description = details['product'].get('description')
+                    product.probability = details['product']['metadata']['probability']
                     await queue_out.put(product)
                 else:
-                    logger.debug(f'Product with url="{url}" does not meet probability threshold.')
+                    logger.debug(f'Product="{product}" does not meet probability threshold.')
             except Exception as e:
                 logger.warning(f"Error executing Zyte API search: {e}.")
             queue_in.task_done()
@@ -176,7 +182,13 @@ class Orchestrator(ABC):
                 break
 
             try:
-                product = await self._processor.classify_product(product=product, context=context)
+                name = product.product_name
+                description = product.product_description
+                product.is_relevant = await self._processor.classify_product(
+                    context=context,
+                    name=name,
+                    description=description
+                )
                 await queue_out.put(product)
             except Exception as e:
                 logger.warning(f"Error processing product: {e}.")
@@ -268,9 +280,10 @@ class Orchestrator(ABC):
     @staticmethod
     async def _add_serp_items_for_search_term(
         queue: asyncio.Queue,
-        search_term: str | List[str],
-        language: Language,
+        search_term: str,
+        search_term_type: str,
         location: Location,
+        language: Language,
         num_results: int,
         marketplaces: List[Host] | None,
         excluded_urls: List[Host] | None,
@@ -279,12 +292,14 @@ class Orchestrator(ABC):
         # Add item without marketplaces
         item = {
             'search_term': search_term,
-            'language': language,
+            'search_term_type': search_term_type,
             'location': location,
+            'language': language,
             'num_results': num_results,
+            'marketplaces': None,
             'excluded_urls': excluded_urls,
         }
-        logger.debug(f'Adding item="{str(item)}" to serp_queue')
+        logger.debug(f'Adding item="{item}" to serp_queue')
         await queue.put(item)
 
         # Add item with marketplaces
@@ -318,6 +333,7 @@ class Orchestrator(ABC):
         # Add initial items to the serp_queue
         await self._add_serp_items_for_search_term(
             search_term=search_term,
+            search_term_type='initial',
             num_results=deepness.num_results,
             **common_kwargs,
         )
@@ -325,6 +341,7 @@ class Orchestrator(ABC):
         # Enrich the search_terms
         enrichment = deepness.enrichment
         if enrichment:
+            # Call DataForSEO to get additional terms
             n_terms = enrichment.additional_terms
             terms = self._enricher.apply(
                 search_term=search_term,
@@ -337,6 +354,7 @@ class Orchestrator(ABC):
             for trm in terms:
                 self._add_serp_items_for_search_term(
                     search_term=trm,
+                    search_term_type='enriched',
                     num_results=enrichment.additional_urls_per_term,
                     **common_kwargs,
                 )

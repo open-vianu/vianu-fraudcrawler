@@ -92,16 +92,16 @@ class ZyteApi(AsyncClient):
             raise err
 
     @staticmethod
-    def keep_product(product: dict, threshold: str) -> bool:
+    def keep_product(details: dict, threshold: str) -> bool:
         """Determines whether to keep the product based on the probability threshold.
 
         Args:
-            product: A product data dictionary.
+            details: A product details data dictionary.
             threshold: The probability threshold used to filter the products.
         """
         try:
-            prob = product['product']['metadata']['probability']
+            prob = details['product']['metadata']['probability']
         except KeyError:
-            logger.warning(f"Product with url={product.get('url')} has no probability value - product is ignored")
+            logger.warning(f"Product with url={details.get('url')} has no probability value - product is ignored")
             return False
         return prob > threshold

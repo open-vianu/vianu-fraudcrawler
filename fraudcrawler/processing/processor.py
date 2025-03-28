@@ -18,7 +18,6 @@ class Processor:
     )
 
     _user_prompt_template = "Context: {context}\n\nProduct Details: {name}\n{description}\n\nRelevance:"
-    _missing_field_message = "MISSING DATA, VIANU MODIFIED - it is a relevant product"
 
     def __init__(self, api_key: str, model: str):
         """Initializes the Processor with the given location.
@@ -30,29 +29,20 @@ class Processor:
         self._client = AsyncOpenAI(api_key=api_key)
         self._model = model
 
-    def _handle_missing_fields(self, product: Dict[str, Any], field: str) -> Dict[str, Any]:
-        if field not in product["product"]:
-            product["product"][field] = self._missing_field_message
-            logger.warning(f'Product data in field="{field}" did not exist and was handled by processor.')
-        return product
-
-    async def _is_relevant(self, product: Dict[str, Any], context: str) -> int:
+    async def _is_relevant(self, context: str, name: str, description: str) -> int:
         """Classifies a single product as suspicious (1) or not suspicious (0) based on the given context.
 
         Args:
-            product: The product data dictionary.
             context: The context used by the LLM for determining if a product is suspicious.
+            name: The name of the product.
+            description: The description of the product.
         """
-
-        # TODO: Handle missing fields -> is that what we want ??!!
-        product = self._handle_missing_fields(product, "name")
-        product = self._handle_missing_fields(product, "description")
 
         # Set up user prompt
         user_prompt = self._user_prompt_template.format(
             context=context,
-            name=product["product"]["name"],
-            description=product["product"]["description"],
+            name=name,
+            description=description,
         )
 
         # Query OpenAI API
@@ -72,19 +62,21 @@ class Processor:
                     f"Unexpected response from OpenAI API: {classification}"
                 )
 
-            logger.info(f'classified product "{product["product"]["name"]}" as {classification}')
+            logger.info(f'classified product "{name}" as {classification}')
             return int(classification)
 
         except Exception as e:
             logger.error(f"Error classifying product: {e}")
             return -1  # Indicate an error occurred
 
-    async def classify_product(self, product: Dict[str, Any], context: str) -> Dict[str, Any]:
+    async def classify_product(self, context: str, name: str | None, description: str | None) -> int:
         """Adds a field 'is_relevant' to the product based on the classification.
 
         Args:
-            product: The product data dictionary.
             context: The context used by the LLM for determining if a product is suspicious.
+            name: The name of the product.
+            description: The description of the product.
         """
-        product["is_relevant"] = await self._is_relevant(product=product, context=context)
-        return product
+        if name is None or description is None:
+            return -1   # TODO: do we want to return -1 in this case?
+        return await self._is_relevant(context=context, name=name, description=description)
