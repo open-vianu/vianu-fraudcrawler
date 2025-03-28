@@ -14,14 +14,14 @@ class ZyteApi(AsyncClient):
 
     _endpoint = "https://api.zyte.com/v1/extract"
     _config = {
-        "javascript": False,
-        "browserHtml": False,
-        "screenshot": False,
-        "productOptions": {"extractFrom": "httpResponseBody"},
-        "httpResponseBody": True,
+        # "javascript": False,
+        # "browserHtml": False,
+        # "screenshot": False,
+        # "productOptions": {"extractFrom": "httpResponseBody"},
+        # "httpResponseBody": True,
+        # "actions": [],
         "geolocation": "CH",
         "viewport": {"width": 1280, "height": 1080},
-        "actions": [],
         "product": True,
     }
 
