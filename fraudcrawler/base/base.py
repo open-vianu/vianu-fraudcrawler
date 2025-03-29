@@ -86,10 +86,9 @@ class Language(BaseModel):
         return {"name": name, "code": code}
 
 
-
 class Enrichment(BaseModel):
-    """Model for enrichment details."""
-
+    """Model for enriching initial search_term with alternative ones."""
+    language: Language
     additional_terms: int
     additional_urls_per_term: int
 

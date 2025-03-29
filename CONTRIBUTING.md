@@ -1,6 +1,6 @@
-# Contributing to Vianu
+# Contributing to vianu-fraudcrawler
 
-First, let us thank you for considering contributing to Vianu! Your involvement is vital to the project's success.
+First, let us thank you for considering contributing to vianu-fraudcrawler! Your involvement is vital to the project's success.
 
 ## How Can You Contribute?
 
@@ -10,10 +10,10 @@ First, let us thank you for considering contributing to Vianu! Your involvement 
 
 ## Getting Started
 
-1. **Clone the Repository**: Clone the Vianu repository to your local machine:
+1. **Clone the Repository**: Clone the vianu-fraudcrawler repository to your local machine:
    ```bash
-   git clone https://github.com/smc40/vianu.git
-   cd vianu
+   git clone https://github.com/open-vianu/vianu-fraudcrawler.git
+   cd vianu-fraudcrawler
    ```
 
 2. **Create a Branch**: Start by creating a new branch for your feature or bugfix:
@@ -45,7 +45,7 @@ First, let us thank you for considering contributing to Vianu! Your involvement 
    git push origin feature/your-feature-name
    ```
 
-8. **Open a Pull Request**: Go to the Vianu repository on GitHub and open a pull request from your branch.
+8. **Open a Pull Request**: Go to the vianu-fraudcrawler repository on GitHub and open a pull request from your branch.
 
 ## Code Style
 
@@ -53,5 +53,5 @@ Please adhere to the following coding standards:
 
 - **PEP 8**: Follow the [PEP 8](https://www.python.org/dev/peps/pep-0008/) style guide for Python code.
 - **Docstrings**: Use clear and concise docstrings for functions and classes.
-- **Type Annotations**: Include type annotations where applicable.
+- **Type Annotations**: Include type annotations everywhere.
 - **Use RUFF for linting**: Use the `ruff format` and `ruff check --fix` commands to ensure proper formatting.

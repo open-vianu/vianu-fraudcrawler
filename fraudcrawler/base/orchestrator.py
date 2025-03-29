@@ -6,7 +6,7 @@ from typing import Dict, List, Set
 
 from fraudcrawler.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY
 from fraudcrawler.settings import N_SERP_WKRS, N_ZYTE_WKRS, N_PROC_WKRS
-from fraudcrawler.base.base import Deepness, Host, Language, Location
+from fraudcrawler.base.base import Deepness, Host, Location
 from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
 
 logger = logging.getLogger(__name__)
@@ -301,7 +301,6 @@ class Orchestrator(ABC):
         self,
         queue: asyncio.Queue,
         search_term: str | List[str],
-        language: Language,
         location: Location,
         deepness: Deepness,
         marketplaces: List[Host] | None,
@@ -327,6 +326,7 @@ class Orchestrator(ABC):
         enrichment = deepness.enrichment
         if enrichment:
             # Call DataForSEO to get additional terms
+            language = enrichment.language
             n_terms = enrichment.additional_terms
             terms = self._enricher.apply(
                 search_term=search_term,
@@ -347,7 +347,6 @@ class Orchestrator(ABC):
     async def run(
         self,
         search_term: str,
-        language: Language,
         location: Location,
         deepness: Deepness,
         context: str,
@@ -358,12 +357,11 @@ class Orchestrator(ABC):
         
         Args:
             search_term: The search term for the query.
-            language: The language to use for the query.
             location: The location to use for the query.
             deepness: The search depth and enrichment details.
+            context: The context prompt to use for detecting relevant products.
             marketplaces: The marketplaces to include in the search.
             excluded_urls: The URLs to exclude from the search.
-            context: The context prompt to use for detecting relevant product.
         """
 
         # ---------------------------
@@ -389,7 +387,6 @@ class Orchestrator(ABC):
         await self._add_serp_items(
             queue=serp_queue,
             search_term=search_term,
-            language=language,
             location=location,
             deepness=deepness,
             marketplaces=marketplaces,

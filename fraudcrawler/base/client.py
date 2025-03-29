@@ -6,7 +6,7 @@ from typing import List
 import pandas as pd
 
 from fraudcrawler.settings import ROOT_DIR
-from fraudcrawler.base.base import Setup, Language, Location, Deepness, Host
+from fraudcrawler.base.base import Setup, Location, Deepness, Host
 from fraudcrawler.base.orchestrator import Orchestrator
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,6 @@ class FraudCrawlerClient(Orchestrator):
     def run(
         self,
         search_term: str,
-        language: Language,
         location: Location,
         deepness: Deepness,
         context: str,
@@ -77,17 +76,15 @@ class FraudCrawlerClient(Orchestrator):
         
         Args:
             search_term: The search term for the query.
-            language: The language to use for the query.
             location: The location to use for the query.
             deepness: The search depth and enrichment details.
+            context: The context prompt to use for detecting relevant products.
             marketplaces: The marketplaces to include in the search.
             excluded_urls: The URLs to exclude from the search.
-            context: The context prompt to use for detecting relevant product.
         """
         asyncio.run(
             super().run(
                 search_term=search_term,
-                language=language,
                 location=location,
                 deepness=deepness,
                 context=context,
