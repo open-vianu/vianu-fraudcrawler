@@ -6,7 +6,7 @@ LOG_LVL = "DEBUG"
 DATE_FMT = "%Y-%m-%d %H:%M:%S"
 MAX_RETRIES = 3
 RETRY_DELAY = 2
-ROOT_DIR = Path(__file__).parents[2]
+ROOT_DIR = Path(__file__).parents[1]
 
 # Serp settings
 GOOGLE_LOCATIONS_FILENAME = ROOT_DIR / 'data' / 'google' / 'google-locations.json'
