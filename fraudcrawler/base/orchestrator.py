@@ -4,8 +4,8 @@ import logging
 from pydantic import BaseModel
 from typing import Dict, List, Set
 
-from fraudcrawler.base.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY
-from fraudcrawler.base.settings import N_SERP_WKRS, N_ZYTE_WKRS, N_PROC_WKRS
+from fraudcrawler.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY
+from fraudcrawler.settings import N_SERP_WKRS, N_ZYTE_WKRS, N_PROC_WKRS
 from fraudcrawler.base.base import Deepness, Host, Language, Location
 from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
 
@@ -21,13 +21,13 @@ class ProductItem(BaseModel):
     marketplace_name: str
 
     # Zyte parameters
-    product_name: str | None
-    product_price: str | None
-    product_description: str | None
+    product_name: str | None = None
+    product_price: str | None = None
+    product_description: str | None = None
     probability: float | None = None
 
     # Processor parameters
-    is_relevant: int | None
+    is_relevant: int | None = None
 
 
 class Orchestrator(ABC):
@@ -281,7 +281,6 @@ class Orchestrator(ABC):
         search_term: str,
         search_term_type: str,
         location: Location,
-        language: Language,
         num_results: int,
         marketplaces: List[Host] | None,
         excluded_urls: List[Host] | None,
@@ -291,7 +290,6 @@ class Orchestrator(ABC):
             'search_term': search_term,
             'search_term_type': search_term_type,
             'location': location,
-            'language': language,
             'num_results': num_results,
             'marketplaces': marketplaces,
             'excluded_urls': excluded_urls,
@@ -312,7 +310,6 @@ class Orchestrator(ABC):
         """Adds all the (enriched) search_term (as serp items) to the queue."""
         common_kwargs = {
             'queue': queue,
-            'language': language,
             'location': location,
             'marketplaces': marketplaces,
             'excluded_urls': excluded_urls,
@@ -373,7 +370,7 @@ class Orchestrator(ABC):
         #        INITIAL SETUP
         # ---------------------------
         # Setup the async framework
-        n_terms_max = 1 + deepness.enrichment.additional_terms if deepness.enrichment else 0
+        n_terms_max = 1 + (deepness.enrichment.additional_terms if deepness.enrichment else 0)
         n_serp_wkrs = min(self._n_serp_wkrs, n_terms_max)
         n_zyte_wkrs = min(self._n_zyte_wkrs, deepness.num_results)
         n_proc_wkrs = min(self._n_proc_wkrs, deepness.num_results)

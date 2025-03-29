@@ -3,7 +3,7 @@ import logging
 
 import aiohttp
 
-from fraudcrawler.base.settings import MAX_RETRIES, RETRY_DELAY, ZYTE_PROBABILITY_THRESHOLD
+from fraudcrawler.settings import MAX_RETRIES, RETRY_DELAY, ZYTE_PROBABILITY_THRESHOLD
 from fraudcrawler.base.base import AsyncClient
 
 logger = logging.getLogger(__name__)

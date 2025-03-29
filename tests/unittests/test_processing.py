@@ -1,6 +1,6 @@
 import pytest
 
-from fraudcrawler.base.settings import PROCESSOR_MODEL
+from fraudcrawler.settings import PROCESSOR_MODEL
 from fraudcrawler.base.base import Setup
 from fraudcrawler import Processor
 

@@ -1,6 +1,6 @@
 import logging
 
-from fraudcrawler.base.settings import LOG_FMT, LOG_LVL
+from fraudcrawler.settings import LOG_FMT, LOG_LVL
 from fraudcrawler.base.base import Setup, Host, Location, Language
 
 logging.basicConfig(level=LOG_LVL.upper(), format=LOG_FMT)

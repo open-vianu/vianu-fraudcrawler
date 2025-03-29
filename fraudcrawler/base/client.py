@@ -5,7 +5,7 @@ from typing import List
 
 import pandas as pd
 
-from fraudcrawler.base.settings import ROOT_DIR
+from fraudcrawler.settings import ROOT_DIR
 from fraudcrawler.base.base import Setup, Language, Location, Deepness, Host
 from fraudcrawler.base.orchestrator import Orchestrator
 
@@ -52,7 +52,7 @@ class FraudCrawlerClient(Orchestrator):
                 "product_name": product.product_name,
                 "product_price": product.product_price,
                 "product_description": product.product_description,
-                "prokduct_probability": product.product_probability,
+                "probability": product.probability,
             }
             products.append(row)
             queue_in.task_done()

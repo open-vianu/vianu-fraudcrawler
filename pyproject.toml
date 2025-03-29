@@ -37,6 +37,9 @@ ruff = "^0.11.2"
 pytest = "^8.3.5"
 pytest-asyncio = "^0.25.3"
 
+[tool.poetry.scripts]
+launch_demo_pipeline = "fraudcrawler.launch_demo_pipeline:main"
+
 [tool.bandit]
 exclude_dirs = [
     "./.venv",

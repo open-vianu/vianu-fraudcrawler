@@ -6,7 +6,7 @@ from typing import List
 
 import aiohttp
 
-from fraudcrawler.base.settings import GOOGLE_LANGUAGES_FILENAME, GOOGLE_LOCATIONS_FILENAME
+from fraudcrawler.settings import GOOGLE_LANGUAGES_FILENAME, GOOGLE_LOCATIONS_FILENAME
 
 logger = logging.getLogger(__name__)
 

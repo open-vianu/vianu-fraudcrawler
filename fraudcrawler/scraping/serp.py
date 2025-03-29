@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import List
 from urllib.parse import urlparse
 
-from fraudcrawler.base.settings import MAX_RETRIES, RETRY_DELAY
+from fraudcrawler.settings import MAX_RETRIES, RETRY_DELAY
 from fraudcrawler.base.base import Host, Location, AsyncClient
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,6 @@ class SerpResult(BaseModel):
     url: str
     domain: str | None
     marketplace_name: str
-
 
 
 class SerpApi(AsyncClient):

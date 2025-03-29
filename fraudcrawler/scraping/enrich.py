@@ -4,7 +4,7 @@ import logging
 from pydantic import BaseModel
 from typing import Dict, List, Iterator
 
-from fraudcrawler.base.settings import ENRICHMENT_UPPER_LIMIT
+from fraudcrawler.settings import ENRICHMENT_UPPER_LIMIT
 from fraudcrawler.base.base import Location, Language, AsyncClient
 
 
