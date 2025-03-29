@@ -14,6 +14,9 @@ pip install vianu-fraudcrawler
 ```
 
 ## Usage
+### `.env` file
+Make sure to create an `.env` file with the necessary API keys and credentials (c.f. `.env.example` file).
+
 ### Run demo pipeline
 ```bash
 python -m fraudcrawler.launch_demo_pipeline
