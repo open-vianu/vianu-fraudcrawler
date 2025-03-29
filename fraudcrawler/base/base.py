@@ -1,0 +1,132 @@
+import json
+import logging
+from pydantic import BaseModel, field_validator, model_validator
+from pydantic_settings import BaseSettings
+from typing import List
+
+import aiohttp
+
+from fraudcrawler.settings import GOOGLE_LANGUAGES_FILENAME, GOOGLE_LOCATIONS_FILENAME
+
+logger = logging.getLogger(__name__)
+
+# Load google locations and languages
+with open(GOOGLE_LOCATIONS_FILENAME, "r") as gfile:
+    _locs = json.load(gfile)
+_LOCATION_CODES = {loc["name"]: loc["country_code"].lower() for loc in _locs}
+with open(GOOGLE_LANGUAGES_FILENAME, "r") as gfile:
+    _langs = json.load(gfile)
+_LANGUAGE_CODES = {lang["language_name"]: lang["language_code"] for lang in _langs}
+
+
+# Base classes
+class Setup(BaseSettings):
+    """Class for loading environment variables."""
+
+    # Crawler ENV variables
+    serpapi_key: str
+    dataforseo_user: str
+    dataforseo_pwd: str
+    zyteapi_key: str
+    openaiapi_key: str
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+
+
+class Host(BaseModel):
+    """Model for host details (e.g. `Host(name="Galaxus", domains="galaxus.ch, digitec.ch")`)."""
+
+    name: str
+    domains: str | List[str]
+
+    @field_validator("domains", mode="before")
+    def split_domains_if_str(cls, val):
+        if isinstance(val, str):
+            return [dom.strip() for dom in val.split(",")]
+        return val
+
+
+class Location(BaseModel):
+    """Model for location details (e.g. `Location(name="Switzerland", code="ch")`)."""
+
+    name: str
+    code: str | None = None
+
+    @model_validator(mode="before")
+    def set_code(cls, values):
+        """Set the location code if not provided and make it lower case."""
+        name = values.get("name")
+        code = values.get("code")
+        if code is None:
+            code = _LOCATION_CODES.get(name)
+            if code is None:
+                raise ValueError(f'Location code not found for location name="{name}"')
+        code = code.lower()
+        return {"name": name, "code": code}
+
+
+class Language(BaseModel):
+    """Model for language details (e.g. `Language(name="German", code="de")`)."""
+
+    name: str
+    code: str | None = None
+
+    @model_validator(mode="before")
+    def set_code(cls, values):
+        """Set the language code if not provided and make it lower case."""
+        name = values.get("name")
+        code = values.get("code")
+        if code is None:
+            code = _LANGUAGE_CODES.get(name)
+            if code is None:
+                raise ValueError(f'Language code not found for language name="{name}"')
+        code = code.lower()
+        return {"name": name, "code": code}
+
+
+class Enrichment(BaseModel):
+    """Model for enriching initial search_term with alternative ones."""
+
+    language: Language
+    additional_terms: int
+    additional_urls_per_term: int
+
+
+class Deepness(BaseModel):
+    """Model for search depth."""
+
+    num_results: int
+    enrichment: Enrichment | None = None
+
+
+class AsyncClient:
+    """Base class for sub-classes using async HTTP requests."""
+
+    @staticmethod
+    async def get(
+        url: str,
+        headers: dict | None = None,
+        params: dict | None = None,
+    ) -> dict:
+        """Async GET request of a given URL returning the data."""
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.get(url=url, params=params) as response:
+                response.raise_for_status()
+                json_ = await response.json()
+        return json_
+
+    @staticmethod
+    async def post(
+        url: str,
+        headers: dict | None = None,
+        data: dict | None = None,
+        auth: aiohttp.BasicAuth | None = None,
+    ) -> dict:
+        """Async POST request of a given URL returning the data."""
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.post(url=url, json=data, auth=auth) as response:
+                response.raise_for_status()
+                json_ = await response.json()
+        return json_

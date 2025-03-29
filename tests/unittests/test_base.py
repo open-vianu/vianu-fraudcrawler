@@ -1,7 +1,7 @@
 import logging
 
-from fraudcrawler.common.settings import LOG_FMT, LOG_LVL
-from fraudcrawler.common.base import Setup, Host, Location, Language
+from fraudcrawler.settings import LOG_FMT, LOG_LVL
+from fraudcrawler.base.base import Setup, Host, Location, Language
 
 logging.basicConfig(level=LOG_LVL.upper(), format=LOG_FMT)
 logger = logging.getLogger(__name__)
@@ -35,6 +35,10 @@ def test_location():
     assert location.name == "switzerland"
     assert location.code == "ch"
 
+    location = Location(name="Switzerland")
+    assert location.name == "Switzerland"
+    assert location.code == "ch"
+
 
 def test_language():
     language = Language(name="German", code="de")
@@ -43,4 +47,8 @@ def test_language():
 
     language = Language(name="german", code="DE")
     assert language.name == "german"
+    assert language.code == "de"
+
+    language = Language(name="German")
+    assert language.name == "German"
     assert language.code == "de"

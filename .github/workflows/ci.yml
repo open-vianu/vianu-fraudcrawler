@@ -20,9 +20,13 @@ jobs:
         poetry install
 
     - name: Python Vulnerability Check
-      #bandit exits by defaul with status 1 if a vulerability was found. Status unequal to 0 lead to a github action failure
+      # bandit exits by defaul with status 1 if a vulerability was found. Status unequal to 0 lead to a github action failure
       run: |
         poetry run bandit -r src
+    
+    # - name: Check typing
+    #   run: | 
+    #     mypy --ignore-missing-imports fraudcrawler tests
 
     - name: Lint with Ruff
       run: |

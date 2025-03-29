@@ -1,6 +1,10 @@
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "vianu-fraudcrawler"
-version = "0.1.2"
+version = "0.2.0"
 description = "Intelligent Market Monitoring"
 authors = [
     "chriguBERTO <christoph@vianu.ch>",
@@ -11,19 +15,12 @@ license = "MIT License"
 readme = "README.md"
 repository = "https://github/open-vianu/vianu-fraudcrawler"
 packages = [
-    {include = "fraudcrawler", from = "."},
+    {include = "fraudcrawler", from = "."}
 ]
+include = ["data/google/images/*"]
 
-[tool.poetry.group.dev.dependencies]
-pytest-cov = "^6.0.0"
-bandit = "^1.8.3"
-ruff = "^0.11.0"
-pytest = "^8.3.5"
-pytest-asyncio = "^0.25.3"
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.setuptools.package-data]
+"fraudcrawler" = ["docs/assets/images/*"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -31,6 +28,18 @@ requests = "^2.32.3"
 pandas = "^2.2.3"
 aiohttp = "^3.11.14"
 pydantic-settings = "^2.8.1"
+openai = "^1.68.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest-cov = "^6.0.0"
+bandit = "^1.8.3"
+ruff = "^0.11.2"
+pytest = "^8.3.5"
+pytest-asyncio = "^0.25.3"
+mypy = "^1.15.0"
+
+[tool.poetry.scripts]
+launch_demo_pipeline = "fraudcrawler.launch_demo_pipeline:main"
 
 [tool.bandit]
 exclude_dirs = [
