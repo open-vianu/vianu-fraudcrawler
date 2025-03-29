@@ -178,4 +178,4 @@ cython_debug/
 todo.md
 
 # Data files
-data/products/
+data/
