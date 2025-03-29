@@ -88,6 +88,7 @@ class Language(BaseModel):
 
 class Enrichment(BaseModel):
     """Model for enriching initial search_term with alternative ones."""
+
     language: Language
     additional_terms: int
     additional_urls_per_term: int
@@ -129,5 +130,3 @@ class AsyncClient:
                 response.raise_for_status()
                 json_ = await response.json()
         return json_
-
-

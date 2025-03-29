@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 class FraudCrawlerClient(Orchestrator):
     """The main client for FraudCrawler."""
 
-
     def __init__(self):
         setup = Setup()
         super().__init__(
@@ -29,7 +28,7 @@ class FraudCrawlerClient(Orchestrator):
         self._data_dir = ROOT_DIR / "data" / "products"
         if not self._data_dir.exists():
             self._data_dir.mkdir(parents=True)
-        
+
     async def _collect_results(self, queue_in):
         """Collects the results from the given queue_in and saves it as csv.
 
@@ -42,7 +41,7 @@ class FraudCrawlerClient(Orchestrator):
             if product is None:
                 queue_in.task_done()
                 break
-            
+
             row = {
                 "search_term": product.search_term,
                 "search_term_type": product.search_term_type,
@@ -55,10 +54,10 @@ class FraudCrawlerClient(Orchestrator):
             }
             products.append(row)
             queue_in.task_done()
-        
+
         df = pd.DataFrame(products)
-        today = datetime.today().strftime('%Y%m%d%H%M%S')
-        filename = self._data_dir / f'{today}.csv'
+        today = datetime.today().strftime("%Y%m%d%H%M%S")
+        filename = self._data_dir / f"{today}.csv"
         df.to_csv(filename, index=False)
         logger.info(f"Results saved to {filename}")
 
@@ -72,7 +71,7 @@ class FraudCrawlerClient(Orchestrator):
         excluded_urls: List[Host] | None = None,
     ) -> None:
         """Runs the pipeline steps: serp, enrich, zyte, process, and collect the results.
-        
+
         Args:
             search_term: The search term for the query.
             location: The location to use for the query.

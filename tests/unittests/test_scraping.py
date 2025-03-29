@@ -46,10 +46,10 @@ async def test_serpapi_search(serpapi):
 
 
 def test_serpapi_keep_url(serpapi):
-    assert serpapi._keep_url(url="https://example.ch", country_code='ch') is True
-    assert serpapi._keep_url(url="https://example.ch/foobar", country_code='ch') is True
-    assert serpapi._keep_url(url="https://example.com", country_code='ch') is True
-    assert serpapi._keep_url(url="https://example.it", country_code='ch') is False
+    assert serpapi._keep_url(url="https://example.ch", country_code="ch") is True
+    assert serpapi._keep_url(url="https://example.ch/foobar", country_code="ch") is True
+    assert serpapi._keep_url(url="https://example.com", country_code="ch") is True
+    assert serpapi._keep_url(url="https://example.it", country_code="ch") is False
 
 
 def test_serpapi_create_serp_result(serpapi):
@@ -57,19 +57,22 @@ def test_serpapi_create_serp_result(serpapi):
     marketplaces = None
     result = serpapi._create_serp_result(url=url, marketplaces=marketplaces)
     assert result.url == url
-    assert result.domain == 'example.ch'
+    assert result.domain == "example.ch"
     assert result.marketplace_name == serpapi._default_marketplace_name
 
-    marketplaces = [Host(name="Galaxus", domains="galaxus.ch"), Host(name="Example", domains="example.ch")]
+    marketplaces = [
+        Host(name="Galaxus", domains="galaxus.ch"),
+        Host(name="Example", domains="example.ch"),
+    ]
     result = serpapi._create_serp_result(url=url, marketplaces=marketplaces)
     assert result.url == url
-    assert result.domain == 'example.ch'
-    assert result.marketplace_name == 'Example'
+    assert result.domain == "example.ch"
+    assert result.marketplace_name == "Example"
 
     marketplaces = [Host(name="Galaxus", domains="galaxus.ch")]
     serp_result = serpapi._create_serp_result(url=url, marketplaces=marketplaces)
     assert serp_result.url == url
-    assert serp_result.domain == 'example.ch'
+    assert serp_result.domain == "example.ch"
     assert serp_result.marketplace_name == serpapi._default_marketplace_name
 
 
@@ -163,8 +166,9 @@ async def test_zyteapi_get_details(zyteapi):
     prod_url = product.get("url").replace("://www.", "://")
     url = url.replace("://www.", "://")
     assert prod_url == url
-    assert 'product' in product
-    assert 'metadata' in product['product']
+    assert "product" in product
+    assert "metadata" in product["product"]
+
 
 def test_zyteapi_keep_product(zyteapi):
     details = {
@@ -172,10 +176,8 @@ def test_zyteapi_keep_product(zyteapi):
         "product": {
             "name": "sildenafil",
             "description": "buy sildenafil online",
-            "metadata": {
-                "probability": 0.5
-            }
-        }
+            "metadata": {"probability": 0.5},
+        },
     }
     assert zyteapi.keep_product(details=details, threshold=0.1) is True
     assert zyteapi.keep_product(details=details, threshold=0.6) is False

@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class ProductItem(BaseModel):
     """Model representing a product item."""
+
     # Serp/Enrich parameters
     search_term: str
     search_term_type: str
@@ -72,16 +73,20 @@ class Orchestrator(ABC):
         self._collected_urls: Set[str] = set()
 
         # Setup the clients
-        self._serpapi = SerpApi(api_key=serpapi_key, max_retries=max_retries, retry_delay=retry_delay)
+        self._serpapi = SerpApi(
+            api_key=serpapi_key, max_retries=max_retries, retry_delay=retry_delay
+        )
         self._enricher = Enricher(user=dataforseo_user, pwd=dataforseo_pwd)
-        self._zyteapi = ZyteApi(api_key=zyteapi_key, max_retries=max_retries, retry_delay=retry_delay)
+        self._zyteapi = ZyteApi(
+            api_key=zyteapi_key, max_retries=max_retries, retry_delay=retry_delay
+        )
         self._processor = Processor(api_key=openaiapi_key, model=openai_model)
 
         # Setup the async framework
         self._n_serp_wkrs = n_serp_wkrs
         self._n_zyte_wkrs = n_zyte_wkrs
         self._n_proc_wkrs = n_proc_wkrs
-        self._queues: Dict[str, asyncio.Queue] | None = None 
+        self._queues: Dict[str, asyncio.Queue] | None = None
         self._workers: Dict[str, List[asyncio.Task] | asyncio.Task] | None = None
 
     @abstractmethod
@@ -93,7 +98,9 @@ class Orchestrator(ABC):
         """
         pass
 
-    async def _serp_execute(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue) -> None:
+    async def _serp_execute(
+        self, queue_in: asyncio.Queue, queue_out: asyncio.Queue
+    ) -> None:
         """Collects the SerpApi search setups from the queue_in, executes the search, filters the results (country_code) and puts them into queue_out.
 
         Args:
@@ -107,11 +114,11 @@ class Orchestrator(ABC):
                 break
 
             try:
-                search_term_type = item.pop('search_term_type')
+                search_term_type = item.pop("search_term_type")
                 results = await self._serpapi.apply(**item)
                 for res in results:
                     product = ProductItem(
-                        search_term=item['search_term'],
+                        search_term=item["search_term"],
                         search_term_type=search_term_type,
                         url=res.url,
                         marketplace_name=res.marketplace_name,
@@ -120,8 +127,10 @@ class Orchestrator(ABC):
             except Exception as e:
                 logger.error(f"Error executing SERP API search: {e}")
             queue_in.task_done()
-        
-    async def _collect_url(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue) -> None:
+
+    async def _collect_url(
+        self, queue_in: asyncio.Queue, queue_out: asyncio.Queue
+    ) -> None:
         """Collects the URLs from the given queue_in, checks for duplicates, and puts them into the queue_out.
 
         Args:
@@ -140,7 +149,9 @@ class Orchestrator(ABC):
                 await queue_out.put(product)
             queue_in.task_done()
 
-    async def _zyte_execute(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue) -> None:
+    async def _zyte_execute(
+        self, queue_in: asyncio.Queue, queue_out: asyncio.Queue
+    ) -> None:
         """Collects the URLs from the queue_in, enriches it with product details metadata, filters them (probability), and puts them into queue_out.
 
         Args:
@@ -156,20 +167,24 @@ class Orchestrator(ABC):
             try:
                 details = await self._zyteapi.get_details(url=product.url)
                 if self._zyteapi.keep_product(details=details):
-                    product.product_name = details['product'].get('name')
-                    product.product_price = details['product'].get('price')
-                    product.product_description = details['product'].get('description')
-                    product.probability = details['product']['metadata']['probability']
+                    product.product_name = details["product"].get("name")
+                    product.product_price = details["product"].get("price")
+                    product.product_description = details["product"].get("description")
+                    product.probability = details["product"]["metadata"]["probability"]
                     await queue_out.put(product)
                 else:
-                    logger.debug(f'Product="{product}" does not meet probability threshold.')
+                    logger.debug(
+                        f'Product="{product}" does not meet probability threshold.'
+                    )
             except Exception as e:
                 logger.warning(f"Error executing Zyte API search: {e}.")
             queue_in.task_done()
 
-    async def _proc_execute(self, queue_in: asyncio.Queue, queue_out: asyncio.Queue, context: str) -> None:
+    async def _proc_execute(
+        self, queue_in: asyncio.Queue, queue_out: asyncio.Queue, context: str
+    ) -> None:
         """Collects the product details from the queue_in, processes them (filtering, relevance, etc.) and puts the results into queue_out.
-        
+
         Args:
             queue_in: The input queue containing the product details.
             queue_out: The output queue to put the processed product details.
@@ -187,9 +202,7 @@ class Orchestrator(ABC):
                 name = product.product_name
                 description = product.product_description
                 product.is_relevant = await self._processor.classify_product(
-                    context=context,
-                    name=name,
-                    description=description
+                    context=context, name=name, description=description
                 )
                 await queue_out.put(product)
             except Exception as e:
@@ -197,12 +210,12 @@ class Orchestrator(ABC):
             queue_in.task_done()
 
     def _setup_async_framework(
-            self,
-            n_serp_wkrs: int,
-            n_zyte_wkrs: int,
-            n_proc_wkrs: int,
-            context: str,
-        ) -> List[asyncio.Queue]:
+        self,
+        n_serp_wkrs: int,
+        n_zyte_wkrs: int,
+        n_proc_wkrs: int,
+        context: str,
+    ) -> List[asyncio.Queue]:
         """Sets up the necessary queues and workers for the async framework.
 
         Args:
@@ -231,7 +244,9 @@ class Orchestrator(ABC):
         ]
 
         # Setup the URL collector
-        url_col = asyncio.create_task(self._collect_url(queue_in=url_queue, queue_out=zyte_queue))
+        url_col = asyncio.create_task(
+            self._collect_url(queue_in=url_queue, queue_out=zyte_queue)
+        )
 
         # Setup the Zyte workers
         zyte_wkrs = [
@@ -287,12 +302,12 @@ class Orchestrator(ABC):
     ) -> None:
         """Adds a search-item to the queue."""
         item = {
-            'search_term': search_term,
-            'search_term_type': search_term_type,
-            'location': location,
-            'num_results': num_results,
-            'marketplaces': marketplaces,
-            'excluded_urls': excluded_urls,
+            "search_term": search_term,
+            "search_term_type": search_term_type,
+            "location": location,
+            "num_results": num_results,
+            "marketplaces": marketplaces,
+            "excluded_urls": excluded_urls,
         }
         logger.debug(f'Adding item="{item}" to serp_queue')
         await queue.put(item)
@@ -308,16 +323,16 @@ class Orchestrator(ABC):
     ) -> None:
         """Adds all the (enriched) search_term (as serp items) to the queue."""
         common_kwargs = {
-            'queue': queue,
-            'location': location,
-            'marketplaces': marketplaces,
-            'excluded_urls': excluded_urls,
+            "queue": queue,
+            "location": location,
+            "marketplaces": marketplaces,
+            "excluded_urls": excluded_urls,
         }
-            
+
         # Add initial items to the serp_queue
         await self._add_serp_items_for_search_term(
             search_term=search_term,
-            search_term_type='initial',
+            search_term_type="initial",
             num_results=deepness.num_results,
             **common_kwargs,
         )
@@ -339,7 +354,7 @@ class Orchestrator(ABC):
             for trm in terms:
                 self._add_serp_items_for_search_term(
                     search_term=trm,
-                    search_term_type='enriched',
+                    search_term_type="enriched",
                     num_results=enrichment.additional_urls_per_term,
                     **common_kwargs,
                 )
@@ -354,7 +369,7 @@ class Orchestrator(ABC):
         excluded_urls: List[Host] | None = None,
     ) -> None:
         """Runs the pipeline steps: serp, enrich, zyte, process, and collect the results.
-        
+
         Args:
             search_term: The search term for the query.
             location: The location to use for the query.
@@ -368,7 +383,9 @@ class Orchestrator(ABC):
         #        INITIAL SETUP
         # ---------------------------
         # Setup the async framework
-        n_terms_max = 1 + (deepness.enrichment.additional_terms if deepness.enrichment else 0)
+        n_terms_max = 1 + (
+            deepness.enrichment.additional_terms if deepness.enrichment else 0
+        )
         n_serp_wkrs = min(self._n_serp_wkrs, n_terms_max)
         n_zyte_wkrs = min(self._n_zyte_wkrs, deepness.num_results)
         n_proc_wkrs = min(self._n_proc_wkrs, deepness.num_results)
@@ -393,7 +410,6 @@ class Orchestrator(ABC):
             excluded_urls=excluded_urls,
         )
 
-
         # ---------------------------
         #   ORCHESTRATE SERP WORKERS
         # ---------------------------
@@ -404,7 +420,7 @@ class Orchestrator(ABC):
         # Wait for the serp workers to be concluded before adding the sentinels to the url_queue
         serp_workers = self._workers["serp"]
         try:
-            logger.debug('gathering and terminating serp_workers')
+            logger.debug("gathering and terminating serp_workers")
             serp_res = await asyncio.gather(*serp_workers, return_exceptions=True)
             for i, res in enumerate(serp_res):
                 if isinstance(res, Exception):
@@ -413,7 +429,6 @@ class Orchestrator(ABC):
             logger.error(f"gathering serp_workers failed: {e}")
         finally:
             await serp_queue.join()
-        
 
         # ---------------------------
         #  ORCHESTRATE URL COLLECTOR
@@ -425,13 +440,12 @@ class Orchestrator(ABC):
         # Wait for the url_collector to be concluded before adding the sentinels to the zyte_queue
         url_collector = self._workers["url"]
         try:
-            logger.debug('gathering and terminating url_collector')
+            logger.debug("gathering and terminating url_collector")
             await url_collector
         except Exception as e:
             logger.error(f"gathering url_collector failed: {e}")
         finally:
             await url_queue.join()
-
 
         # ---------------------------
         #  ORCHESTRATE ZYTE WORKERS
@@ -444,7 +458,7 @@ class Orchestrator(ABC):
         # Wait for the zyte_workers to be concluded before adding the sentinels to the proc_queue
         zyte_workers = self._workers["zyte"]
         try:
-            logger.debug('gathering and terminating zyte_workers')
+            logger.debug("gathering and terminating zyte_workers")
             zyte_res = await asyncio.gather(*zyte_workers, return_exceptions=True)
             for i, res in enumerate(zyte_res):
                 if isinstance(res, Exception):
@@ -453,7 +467,6 @@ class Orchestrator(ABC):
             logger.error(f"gathering zyte_workers failed: {e}")
         finally:
             await zyte_queue.join()
-        
 
         # ---------------------------
         #  ORCHESTRATE PROC WORKERS
@@ -466,7 +479,7 @@ class Orchestrator(ABC):
         # Wait for the proc_workers to be concluded before adding the sentinels to the res_queue
         proc_workers = self._workers["proc"]
         try:
-            logger.debug('gathering and terminating proc_workers')
+            logger.debug("gathering and terminating proc_workers")
             proc_res = await asyncio.gather(*proc_workers, return_exceptions=True)
             for i, res in enumerate(proc_res):
                 if isinstance(res, Exception):
@@ -475,7 +488,6 @@ class Orchestrator(ABC):
             logger.error(f"gathering proc_workers failed: {e}")
         finally:
             await proc_queue.join()
-        
 
         # ---------------------------
         #  ORCHESTRATE RES COLLECTOR
@@ -487,7 +499,7 @@ class Orchestrator(ABC):
         # Wait for the res_collector to be concluded
         res_collector = self._workers["res"]
         try:
-            logger.debug('gathering and terminating res_collector')
+            logger.debug("gathering and terminating res_collector")
             await res_collector
         except Exception as e:
             logger.error(f"gathering res_collector failed: {e}")

@@ -18,7 +18,6 @@ class Keyword(BaseModel):
     volume: int
 
 
-
 class Enricher(AsyncClient):
     """A client to interact with the DataForSEO API for enhancing searches (producing alternative search_terms)."""
 

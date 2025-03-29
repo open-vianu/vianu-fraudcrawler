@@ -9,8 +9,8 @@ RETRY_DELAY = 2
 ROOT_DIR = Path(__file__).parents[1]
 
 # Serp settings
-GOOGLE_LOCATIONS_FILENAME = ROOT_DIR / 'data' / 'google' / 'google-locations.json'
-GOOGLE_LANGUAGES_FILENAME = ROOT_DIR / 'data' / 'google' / 'google-languages.json'
+GOOGLE_LOCATIONS_FILENAME = ROOT_DIR / "data" / "google" / "google-locations.json"
+GOOGLE_LANGUAGES_FILENAME = ROOT_DIR / "data" / "google" / "google-languages.json"
 
 # Enrichment settings
 ENRICHMENT_ADDITIONAL_TERMS = 3

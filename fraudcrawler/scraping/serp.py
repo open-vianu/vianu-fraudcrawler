@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class SerpResult(BaseModel):
     """Model for a single search result from SerpApi."""
-    
+
     url: str
     domain: str | None
     marketplace_name: str
@@ -59,7 +59,7 @@ class SerpApi(AsyncClient):
         hostname = urlparse(url).hostname
         if hostname and hostname.startswith("www."):
             return hostname[4:]
-        
+
         logger.warning(f'Failed to extract domain from url="{url}"')
         return None
 
@@ -127,12 +127,11 @@ class SerpApi(AsyncClient):
             url: The URL to investigate.
             country_code: The country code used to filter the products.
         """
-        return (
-            f".{country_code}" in url.lower()
-            or ".com" in url.lower()
-        )
+        return f".{country_code}" in url.lower() or ".com" in url.lower()
 
-    def _create_serp_result(self, url: str, marketplaces: List[Host] | None) -> SerpResult:
+    def _create_serp_result(
+        self, url: str, marketplaces: List[Host] | None
+    ) -> SerpResult:
         """From a given url it creates the class:`SerpResult` instance.
 
         If marketplaces is None or the domain can not be extracted, the default marketplace name is used.
@@ -161,7 +160,7 @@ class SerpApi(AsyncClient):
         excluded_urls: List[Host] | None = None,
     ) -> List[SerpResult]:
         """Performs a search using SerpApi, filters based on country code and returns the URLs.
-        
+
         Args:
             search_term: The search term to use for the query.
             location: The location to use for the query.
@@ -177,7 +176,7 @@ class SerpApi(AsyncClient):
         if marketplaces:
             sites = [dom for host in marketplaces for dom in host.domains]
             search_string += " site:" + " OR site:".join(s for s in sites)
-        
+
         # Perform the search
         urls = await self._search(
             search_string=search_string,

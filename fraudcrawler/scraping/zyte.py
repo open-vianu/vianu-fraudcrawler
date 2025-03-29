@@ -47,7 +47,7 @@ class ZyteApi(AsyncClient):
 
         Args:
             url: The URL to fetch product details from.
-        
+
         Returns:
             A dictionary containing the product details, fields include:
             (c.f. https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/response/200/product)
@@ -92,7 +92,9 @@ class ZyteApi(AsyncClient):
             raise err
 
     @staticmethod
-    def keep_product(details: dict, threshold: float = ZYTE_PROBABILITY_THRESHOLD) -> bool:
+    def keep_product(
+        details: dict, threshold: float = ZYTE_PROBABILITY_THRESHOLD
+    ) -> bool:
         """Determines whether to keep the product based on the probability threshold.
 
         Args:
@@ -100,8 +102,10 @@ class ZyteApi(AsyncClient):
             threshold: The probability threshold used to filter the products.
         """
         try:
-            prob = float(details['product']['metadata']['probability'])
+            prob = float(details["product"]["metadata"]["probability"])
         except KeyError:
-            logger.warning(f"Product with url={details.get('url')} has no probability value - product is ignored")
+            logger.warning(
+                f"Product with url={details.get('url')} has no probability value - product is ignored"
+            )
             return False
         return prob > threshold

@@ -16,7 +16,9 @@ class Processor:
         "Respond only with the number 1 or 0."
     )
 
-    _user_prompt_template = "Context: {context}\n\nProduct Details: {name}\n{description}\n\nRelevance:"
+    _user_prompt_template = (
+        "Context: {context}\n\nProduct Details: {name}\n{description}\n\nRelevance:"
+    )
 
     def __init__(self, api_key: str, model: str):
         """Initializes the Processor with the given location.
@@ -68,7 +70,9 @@ class Processor:
             logger.error(f"Error classifying product: {e}")
             return -1  # Indicate an error occurred
 
-    async def classify_product(self, context: str, name: str | None, description: str | None) -> int:
+    async def classify_product(
+        self, context: str, name: str | None, description: str | None
+    ) -> int:
         """Adds a field 'is_relevant' to the product based on the classification.
 
         Args:
@@ -77,5 +81,7 @@ class Processor:
             description: The description of the product.
         """
         if name is None or description is None:
-            return -1   # TODO: do we want to return -1 in this case?
-        return await self._is_relevant(context=context, name=name, description=description)
+            return -1  # TODO: do we want to return -1 in this case?
+        return await self._is_relevant(
+            context=context, name=name, description=description
+        )
