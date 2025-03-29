@@ -2,7 +2,7 @@
 Intelligent Market Monitoring
 
 The pipeline for monitoring the market has the folling main steps:
-1. search for a given search_term using SerpAPI
+1. search for a given term using SerpAPI
 2. get product information using ZyteAPI
 3. assess relevance of the found products using an OpenAI API
 
@@ -19,8 +19,8 @@ pip install vianu-fraudcrawler
 python -m fraudcrawler.launch_demo_pipeline
 ```
 
-### Customize your pipeline
-Start by initializing your client
+### Customize the pipeline
+Start by initializing the client
 ```python
 from fraudcrawler import FraudCrawlerClient
 
@@ -77,14 +77,15 @@ client.run(
     location=location,
     deepness=deepness,
     context=context,
-    # marketplaces=marketplaces,    # Uncomment this if there are marketplaces
-    # excluded_urls=excluded_urls   # Uncomment this if there are excluded_urls
+    # marketplaces=marketplaces,    # Uncomment this for using marketplaces
+    # excluded_urls=excluded_urls   # Uncomment this for using excluded_urls
 )
 ```
 This creates a file with name pattern `<search_term>_<date>.csv` inside the folder `data/products`.
 
 ## Contributing
-see CONTRIBUTING.
+see `CONTRIBUTING.md`
 
 ### Async Setup
+The following image provides a schematic representation of the package's async setup.
 ![Async Setup](docs/assets/images/Fraudcrawler_Async_Setup.svg)
