@@ -14,16 +14,9 @@ def processor():
 
 @pytest.mark.asyncio
 async def test_processor_classify_product(processor):
-    product = {
-        "url": "http://example.ch",
-        "product": {
-            "name": "sildenafil",
-            "description": "buy sildenafil online",
-            "metadata": {"probability": 0.5},
-        },
-    }
     context = "We are interested in medical products"
-    product = await processor.classify_product(product=product, context=context)
-    assert "is_relevant" in product
-    assert isinstance(product["is_relevant"], int)
-    assert product["is_relevant"] in [0, 1]
+    name = "sildenafil"
+    description = "buy sildenafil online"
+    is_relevant = await processor.classify_product(context=context, name=name, description=description)
+    assert isinstance(is_relevant, int)
+    assert is_relevant in [0, 1]
