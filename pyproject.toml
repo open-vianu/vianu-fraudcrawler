@@ -15,9 +15,11 @@ license = "MIT License"
 readme = "README.md"
 repository = "https://github/open-vianu/vianu-fraudcrawler"
 packages = [
-    {include = "fraudcrawler", from = "."},
-    {include = "docs/assets/images/*", from = "."},
-    {include = "data/google/*", from = "."},
+    {include = "fraudcrawler", from = "."}
+]
+include = [
+    "docs/assest/images/*",
+    "data/google/images/*"
 ]
 
 [tool.setuptools.package-data]
@@ -34,9 +36,6 @@ openai = "^1.68.2"
 [tool.poetry.group.dev.dependencies]
 pytest-cov = "^6.0.0"
 bandit = "^1.8.3"
-ruff = "^0.11.0"
-pytest = "^8.3.5"
-pytest-asyncio = "^0.25.3"
 
 [tool.bandit]
 exclude_dirs = [
