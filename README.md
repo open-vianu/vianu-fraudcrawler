@@ -81,7 +81,7 @@ client.run(
     # excluded_urls=excluded_urls   # Uncomment this for using excluded_urls
 )
 ```
-This creates a file with name pattern `<search_term>_<date>.csv` inside the folder `data/products`.
+This creates a file with name pattern `<datetime[%Y%m%d%H%M%S]>.csv` inside the folder `data/products`.
 
 ## Contributing
 see `CONTRIBUTING.md`

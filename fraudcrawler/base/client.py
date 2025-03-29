@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 class FraudCrawlerClient(Orchestrator):
     """The main client for FraudCrawler."""
 
-    _filename_template = "{today}_{search_term}.csv"
 
     def __init__(self):
         setup = Setup()
@@ -58,8 +57,8 @@ class FraudCrawlerClient(Orchestrator):
             queue_in.task_done()
         
         df = pd.DataFrame(products)
-        today = datetime.today().strftime('%Y%m%d')
-        filename = self._data_dir / self._filename_template.format(today=today, search_term=product.search_term)
+        today = datetime.today().strftime('%Y%m%d%H%M%S')
+        filename = self._data_dir / f'{today}.csv'
         df.to_csv(filename, index=False)
         logger.info(f"Results saved to {filename}")
 
