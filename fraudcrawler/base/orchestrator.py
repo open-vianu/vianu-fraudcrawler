@@ -4,7 +4,7 @@ import logging
 from pydantic import BaseModel
 from typing import Dict, List, Set
 
-from fraudcrawler.base.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY, ZYTE_PROBABILITY_THRESHOLD
+from fraudcrawler.base.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY
 from fraudcrawler.base.settings import N_SERP_WKRS, N_ZYTE_WKRS, N_PROC_WKRS
 from fraudcrawler.base.base import Deepness, Host, Language, Location
 from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor

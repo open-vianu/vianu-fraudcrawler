@@ -2,7 +2,7 @@ import logging
 
 from fraudcrawler.base.settings import LOG_FMT, LOG_LVL, DATE_FMT
 from fraudcrawler import FraudCrawlerClient, Language, Location
-from fraudcrawler import Deepness, Enrichment
+from fraudcrawler import Deepness
 
 logging.basicConfig(level=LOG_LVL.upper(), format=LOG_FMT, datefmt=DATE_FMT)
 logger = logging.getLogger(__name__)
@@ -18,6 +18,7 @@ deepness = Deepness(num_results=50)
 context = "This organization is interested in medical products and drugs."
 
 # # Optional: Add enrichement, marketplaces, and excluded_urls
+# from fraudcrawler import Enrichment
 # deepness.enrichement = Enrichment(
 #     additional_terms=5,
 #     additional_urls_per_term=5
