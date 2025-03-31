@@ -56,7 +56,7 @@ def main():
     print(f'Number of relevant products: {len(df[df["is_relevant"] == 1])}')
     print()
     print(f"First {_N_HEAD} products are:")
-    print(df.head(n=10))
+    print(df.head(n=_N_HEAD))
     print()
 
 
