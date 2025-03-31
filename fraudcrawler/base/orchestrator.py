@@ -353,7 +353,7 @@ class Orchestrator(ABC):
         if enrichment:
             # Call DataForSEO to get additional terms
             n_terms = enrichment.additional_terms
-            terms = self._enricher.apply(
+            terms = await self._enricher.apply(
                 search_term=search_term,
                 language=language,
                 location=location,
@@ -362,7 +362,7 @@ class Orchestrator(ABC):
 
             # Add the enriched search terms to the serp_queue
             for trm in terms:
-                self._add_serp_items_for_search_term(
+                await self._add_serp_items_for_search_term(
                     search_term=trm,
                     search_term_type="enriched",
                     num_results=enrichment.additional_urls_per_term,

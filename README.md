@@ -51,10 +51,9 @@ context = "This organization is interested in medical products and drugs."
 (Optional) Add search term enrichement. This will find related search terms (in a given language) and search for these as well.
 ```python
 from fraudcrawler import Enrichment
-deepness.enrichement = Enrichment(
-    language=Language(name="German")
+deepness.enrichment = Enrichment(
     additional_terms=5,
-    additional_urls_per_term=5
+    additional_urls_per_term=10
 )
 ```
 
@@ -62,15 +61,15 @@ deepness.enrichement = Enrichment(
 ```python
 from fraudcrawler import Host,
 marketplaces = [
-    Host(name="Ricardo", domains="ricardo.ch"),
-    Host(name="Galaxus", domains="digitec.ch, galaxus.ch")
+    Host(name="International", domains="zavamed.com,apomeds.com"),
+    Host(name="National", domains="netdoktor.ch, nobelpharma.ch"),
 ]
 ```
 
 (Optional) Exclude urls (where you don't want to find products)
 ```python
 excluded_urls = [
-    Host(name="Altibbi", domains="altibbi.com")
+    Host(name="Compendium", domains="compendium.ch"),
 ]
 ```
 
