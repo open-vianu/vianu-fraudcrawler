@@ -1,5 +1,6 @@
-from fraudcrawler import FraudCrawlerClient, Location, Deepness
+from fraudcrawler import FraudCrawlerClient, Language, Location, Deepness
 
+_N_HEAD = 10
 
 def main():
     # Setup the client
@@ -7,6 +8,7 @@ def main():
 
     # Setup the search
     search_term = "sildenafil"
+    language = Language(name="German")
     location = Location(name="Switzerland")
     deepness = Deepness(num_results=50)
     context = "This organization is interested in medical products and drugs."
@@ -14,7 +16,6 @@ def main():
     # # Optional: Add tern ENRICHEMENT
     # from fraudcrawler import Enrichment, Language
     # deepness.enrichement = Enrichment(
-    #     language = Language(name="German")
     #     additional_terms=5,
     #     additional_urls_per_term=5
     # )
@@ -33,6 +34,7 @@ def main():
     # Run the search
     client.run(
         search_term=search_term,
+        language=language,
         location=location,
         deepness=deepness,
         context=context,
@@ -51,7 +53,9 @@ def main():
     print(title)
     print("=" * len(title))
     df = client.load_results()
-    print(f"Number of products: {len(df)}\n")
+    print(f"Number of products found: {len(df)}\n")
+
+    print(f"First {_N_HEAD} products:")
     print(df.head(n=10))
     print()
 

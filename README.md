@@ -33,7 +33,8 @@ client = FraudCrawlerClient()
 
 For setting up the search we need 5 main objects
 - `search_term`: The search term for the query.
-- `location`: The SerpAPI location used for the query.
+- `language`: The Language used in SerpAPI ('hl') and for related search terms (within optional enrichement)
+- `location`: The SerpAPI location ('gl') used for the query.
 - `deepness`: Defines the search depth.
 - `context`: The context prompt to use for detecting relevant products
 
@@ -41,6 +42,7 @@ For setting up the search we need 5 main objects
 from fraudcrawler import Location, Deepness
 # Setup the search
 search_term = "sildenafil"
+language = Language(name="German")
 location = Location(name="Switzerland")
 deepness = Deepness(num_results=50)
 context = "This organization is interested in medical products and drugs."

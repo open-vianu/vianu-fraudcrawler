@@ -89,7 +89,6 @@ class Language(BaseModel):
 class Enrichment(BaseModel):
     """Model for enriching initial search_term with alternative ones."""
 
-    language: Language
     additional_terms: int
     additional_urls_per_term: int
 
