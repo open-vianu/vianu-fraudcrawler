@@ -91,4 +91,4 @@ see `CONTRIBUTING.md`
 
 ### Async Setup
 The following image provides a schematic representation of the package's async setup.
-![Async Setup](docs/assets/images/Fraudcrawler_Async_Setup.svg)
+![Async Setup](https://github.com/open-vianu/vianu-fraudcrawler/raw/master/docs/assets/images/Fraudcrawler_Async_Setup.svg)

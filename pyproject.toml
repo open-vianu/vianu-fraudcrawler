@@ -17,10 +17,6 @@ repository = "https://github/open-vianu/vianu-fraudcrawler"
 packages = [
     {include = "fraudcrawler", from = "."}
 ]
-include = ["data/google/images/*"]
-
-[tool.setuptools.package-data]
-"fraudcrawler" = ["docs/assets/images/*"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
