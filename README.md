@@ -84,7 +84,19 @@ client.run(
     # excluded_urls=excluded_urls   # Uncomment this for using excluded_urls
 )
 ```
-This creates a file with name pattern `<datetime[%Y%m%d%H%M%S]>.csv` inside the folder `data/products`.
+This creates a file with name pattern `<search_term>_<datetime[%Y%m%d%H%M%S]>.csv` inside the folder `data/results/`.
+
+Once the pipeline terminated the results can be loaded and examined as follows:
+```python
+df = client.load_results()
+print(df.head(n=10))
+```
+
+If the client has been used to run multiple pipelines, an overview of the available results (for a given instance of 
+`FraudCrawlerClient`) can be obtained with
+```python
+client.print_available_results()
+```
 
 ## Contributing
 see `CONTRIBUTING.md`
