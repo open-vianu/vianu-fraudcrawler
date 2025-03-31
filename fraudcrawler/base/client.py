@@ -8,7 +8,7 @@ from typing import List
 import pandas as pd
 
 from fraudcrawler.settings import ROOT_DIR
-from fraudcrawler.base.base import Setup, Location, Deepness, Host
+from fraudcrawler.base.base import Setup, Language, Location, Deepness, Host
 from fraudcrawler.base.orchestrator import Orchestrator, ProductItem
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class FraudCrawlerClient(Orchestrator):
         """
         products = []
         while True:
-            product: ProductItem = await queue_in.get()
+            product: ProductItem | None = await queue_in.get()
             if product is None:
                 queue_in.task_done()
                 break
@@ -77,6 +77,7 @@ class FraudCrawlerClient(Orchestrator):
     def run(
         self,
         search_term: str,
+        language: Language,
         location: Location,
         deepness: Deepness,
         context: str,
@@ -87,6 +88,7 @@ class FraudCrawlerClient(Orchestrator):
 
         Args:
             search_term: The search term for the query.
+            language: The language to use for the query.
             location: The location to use for the query.
             deepness: The search depth and enrichment details.
             context: The context prompt to use for detecting relevant products.
@@ -103,6 +105,7 @@ class FraudCrawlerClient(Orchestrator):
         asyncio.run(
             super().run(
                 search_term=search_term,
+                language=language,
                 location=location,
                 deepness=deepness,
                 context=context,

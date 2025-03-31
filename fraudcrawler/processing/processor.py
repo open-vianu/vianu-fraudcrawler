@@ -2,6 +2,9 @@ import logging
 
 from openai import AsyncOpenAI
 
+from fraudcrawler.settings import PROCESSOR_MISSING_FIELDS_DEFAULT_RELEVANCE
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -80,8 +83,12 @@ class Processor:
             name: The name of the product.
             description: The description of the product.
         """
+
+        # If name or description is missing, return default relevance
         if name is None or description is None:
-            return -1  # TODO: do we want to return -1 in this case?
+            return PROCESSOR_MISSING_FIELDS_DEFAULT_RELEVANCE
+        
+        # Otherwise, classify the product based on the given context
         return await self._is_relevant(
             context=context, name=name, description=description
         )

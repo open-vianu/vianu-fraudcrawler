@@ -6,7 +6,7 @@ from typing import Dict, List, Set
 
 from fraudcrawler.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY
 from fraudcrawler.settings import N_SERP_WKRS, N_ZYTE_WKRS, N_PROC_WKRS
-from fraudcrawler.base.base import Deepness, Host, Location
+from fraudcrawler.base.base import Deepness, Host, Language, Location
 from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
 
 logger = logging.getLogger(__name__)
@@ -302,6 +302,7 @@ class Orchestrator(ABC):
         queue: asyncio.Queue,
         search_term: str,
         search_term_type: str,
+        language: Language,
         location: Location,
         num_results: int,
         marketplaces: List[Host] | None,
@@ -311,6 +312,7 @@ class Orchestrator(ABC):
         item = {
             "search_term": search_term,
             "search_term_type": search_term_type,
+            "language": language,
             "location": location,
             "num_results": num_results,
             "marketplaces": marketplaces,
@@ -323,6 +325,7 @@ class Orchestrator(ABC):
         self,
         queue: asyncio.Queue,
         search_term: str | List[str],
+        language: Language,
         location: Location,
         deepness: Deepness,
         marketplaces: List[Host] | None,
@@ -331,6 +334,7 @@ class Orchestrator(ABC):
         """Adds all the (enriched) search_term (as serp items) to the queue."""
         common_kwargs = {
             "queue": queue,
+            "language": language,
             "location": location,
             "marketplaces": marketplaces,
             "excluded_urls": excluded_urls,
@@ -348,18 +352,17 @@ class Orchestrator(ABC):
         enrichment = deepness.enrichment
         if enrichment:
             # Call DataForSEO to get additional terms
-            language = enrichment.language
             n_terms = enrichment.additional_terms
-            terms = self._enricher.apply(
+            terms = await self._enricher.apply(
                 search_term=search_term,
-                location=location,
                 language=language,
+                location=location,
                 n_terms=n_terms,
             )
 
             # Add the enriched search terms to the serp_queue
             for trm in terms:
-                self._add_serp_items_for_search_term(
+                await self._add_serp_items_for_search_term(
                     search_term=trm,
                     search_term_type="enriched",
                     num_results=enrichment.additional_urls_per_term,
@@ -369,6 +372,7 @@ class Orchestrator(ABC):
     async def run(
         self,
         search_term: str,
+        language: Language,
         location: Location,
         deepness: Deepness,
         context: str,
@@ -379,6 +383,7 @@ class Orchestrator(ABC):
 
         Args:
             search_term: The search term for the query.
+            language: The language to use for the query.
             location: The location to use for the query.
             deepness: The search depth and enrichment details.
             context: The context prompt to use for detecting relevant products.
@@ -411,6 +416,7 @@ class Orchestrator(ABC):
         await self._add_serp_items(
             queue=serp_queue,
             search_term=search_term,
+            language=language,
             location=location,
             deepness=deepness,
             marketplaces=marketplaces,
@@ -427,13 +433,14 @@ class Orchestrator(ABC):
         # Wait for the serp workers to be concluded before adding the sentinels to the url_queue
         serp_workers = self._workers["serp"]
         try:
-            logger.debug("gathering and terminating serp_workers")
+            logger.debug("Waiting for serp_workers to conclude their tasks...")
             serp_res = await asyncio.gather(*serp_workers, return_exceptions=True)
             for i, res in enumerate(serp_res):
                 if isinstance(res, Exception):
                     logger.error(f"Error in serp_worker {i}: {res}")
+            logger.debug("...serp_workers concluded their tasks")
         except Exception as e:
-            logger.error(f"gathering serp_workers failed: {e}")
+            logger.error(f"Gathering serp_workers failed: {e}")
         finally:
             await serp_queue.join()
 
@@ -447,10 +454,11 @@ class Orchestrator(ABC):
         # Wait for the url_collector to be concluded before adding the sentinels to the zyte_queue
         url_collector = self._workers["url"]
         try:
-            logger.debug("gathering and terminating url_collector")
+            logger.debug("Waiting for url_collector to conclude its tasks...")
             await url_collector
+            logger.debug("...url_collector concluded its tasks")
         except Exception as e:
-            logger.error(f"gathering url_collector failed: {e}")
+            logger.error(f"Gathering url_collector failed: {e}")
         finally:
             await url_queue.join()
 
@@ -465,13 +473,14 @@ class Orchestrator(ABC):
         # Wait for the zyte_workers to be concluded before adding the sentinels to the proc_queue
         zyte_workers = self._workers["zyte"]
         try:
-            logger.debug("gathering and terminating zyte_workers")
+            logger.debug("Waiting for zyte_workers to conclude their tasks...")
             zyte_res = await asyncio.gather(*zyte_workers, return_exceptions=True)
             for i, res in enumerate(zyte_res):
                 if isinstance(res, Exception):
                     logger.error(f"Error in zyte_worker {i}: {res}")
+            logger.debug("...zyte_workers concluded their tasks")
         except Exception as e:
-            logger.error(f"gathering zyte_workers failed: {e}")
+            logger.error(f"Gathering zyte_workers failed: {e}")
         finally:
             await zyte_queue.join()
 
@@ -486,13 +495,14 @@ class Orchestrator(ABC):
         # Wait for the proc_workers to be concluded before adding the sentinels to the res_queue
         proc_workers = self._workers["proc"]
         try:
-            logger.debug("gathering and terminating proc_workers")
+            logger.debug("Waiting for proc_workers to conclude their tasks...")
             proc_res = await asyncio.gather(*proc_workers, return_exceptions=True)
             for i, res in enumerate(proc_res):
                 if isinstance(res, Exception):
                     logger.error(f"Error in proc_worker {i}: {res}")
+            logger.debug("...proc_workers concluded their tasks")
         except Exception as e:
-            logger.error(f"gathering proc_workers failed: {e}")
+            logger.error(f"Gathering proc_workers failed: {e}")
         finally:
             await proc_queue.join()
 
@@ -506,11 +516,12 @@ class Orchestrator(ABC):
         # Wait for the res_collector to be concluded
         res_collector = self._workers["res"]
         try:
-            logger.debug("gathering and terminating res_collector")
+            logger.debug("Waiting for res_collector to conclude its tasks...")
             await res_collector
+            logger.debug("...res_collector concluded its tasks")
         except Exception as e:
-            logger.error(f"gathering res_collector failed: {e}")
+            logger.error(f"Gathering res_collector failed: {e}")
         finally:
             await res_queue.join()
 
-        logger.info("pipeline concluded; async framework is closed")
+        logger.info("Pipeline concluded; async framework is closed")

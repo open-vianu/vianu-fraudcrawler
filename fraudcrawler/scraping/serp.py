@@ -5,7 +5,7 @@ from typing import List
 from urllib.parse import urlparse
 
 from fraudcrawler.settings import MAX_RETRIES, RETRY_DELAY
-from fraudcrawler.base.base import Host, Location, AsyncClient
+from fraudcrawler.base.base import Host, Language, Location, AsyncClient
 
 logger = logging.getLogger(__name__)
 
@@ -55,17 +55,21 @@ class SerpApi(AsyncClient):
         if not url.startswith(("http://", "https://")):
             url = "http://" + url
 
-        # Get the hostname without the 'www' subdomain
+        # Get the hostname
         hostname = urlparse(url).hostname
+        if hostname is None:
+            logger.warning(f'Failed to extract domain from url="{url}"')
+            return None
+        
+        # Remove www. prefix
         if hostname and hostname.startswith("www."):
-            return hostname[4:]
-
-        logger.warning(f'Failed to extract domain from url="{url}"')
-        return None
+            hostname = hostname[4:]
+        return hostname 
 
     async def _search(
         self,
         search_string: str,
+        language: Language,
         location: Location,
         num_results: int,
     ) -> List[str]:
@@ -73,22 +77,32 @@ class SerpApi(AsyncClient):
 
         Args:
             search_string: The search string (with potentially added site: parameters).
-            location: The location to use for the query.
-            num_results: Max number of results to return (default: 10).
+            language: The language to use for the query ('hl' parameter).
+            location: The location to use for the query ('gl' parameter).
+            num_results: Max number of results to return.
+        
+        The SerpAPI parameters are:
+            engine: The search engine to use ('google' NOT 'google_shopping').
+            q: The search string (with potentially added site: parameters).
+            google_domain: The Google domain to use for the search (e.g. google.[com]).
+            location_[requested|used]: The location to use for the search.
+            tbs: The time-based search parameters (e.g. 'ctr:CH&cr:countryCH').
+            gl: The country code to use for the search.
+            hl: The language code to use for the search.
+            num: The number of results to return.
+            api_key: The API key to use for the search.
         """
         # Setup the parameters
-        #  - q: The search string (with potentially added site: parameters).
-        #  - location_[requested|used]: The location to use for the search.
-        #  - google_domain: The Google domain to use for the search (e.g. google.[com]).
-        #  - num: The number of results to return.
-        #  - engine: The search engine to use ('google' NOT 'google_shopping').
         params = {
+            "engine": self._engine,
             "q": search_string,
+            "google_domain": f"google.{location.code}",
             "location_requested": location.name,
             "location_used": location.name,
-            "google_domain": f"google.{location.code}",
+            "tbs": f"ctr:{location.code.upper()}&cr:country{location.code.upper()}",
+            "gl": location.code,
+            "hl": language.code,
             "num": num_results,
-            "engine": self._engine,
             "api_key": self._api_key,
         }
 
@@ -154,6 +168,7 @@ class SerpApi(AsyncClient):
     async def apply(
         self,
         search_term: str,
+        language: Language,
         location: Location,
         num_results: int,
         marketplaces: List[Host] | None = None,
@@ -163,6 +178,7 @@ class SerpApi(AsyncClient):
 
         Args:
             search_term: The search term to use for the query.
+            language: The language to use for the query.
             location: The location to use for the query.
             num_results: Max number of results to return (default: 10).
             marketplaces: The marketplaces to include in the search.
@@ -180,6 +196,7 @@ class SerpApi(AsyncClient):
         # Perform the search
         urls = await self._search(
             search_string=search_string,
+            language=language,
             location=location,
             num_results=num_results,
         )

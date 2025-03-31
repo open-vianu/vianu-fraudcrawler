@@ -4,7 +4,7 @@ import logging
 from pydantic import BaseModel
 from typing import Dict, List, Iterator
 
-from fraudcrawler.settings import ENRICHMENT_UPPER_LIMIT
+from fraudcrawler.settings import ENRICHMENT_DEFAULT_LIMIT
 from fraudcrawler.base.base import Location, Language, AsyncClient
 
 
@@ -115,14 +115,14 @@ class Enricher(AsyncClient):
         search_term: str,
         language: Language,
         location: Location,
-        limit: int = ENRICHMENT_UPPER_LIMIT,
+        limit: int = ENRICHMENT_DEFAULT_LIMIT,
     ) -> List[Keyword]:
         """Get keyword suggestions for a given search_term.
 
         Args:
             search_term: The search term to use for the query.
-            location: The location to use for the search.
             language: The language to use for the search.
+            location: The location to use for the search.
             limit: The upper limit of suggestions to get.
         """
 
@@ -215,7 +215,7 @@ class Enricher(AsyncClient):
         search_term: str,
         language: Language,
         location: Location,
-        limit: int = ENRICHMENT_UPPER_LIMIT,
+        limit: int = ENRICHMENT_DEFAULT_LIMIT,
     ) -> List[Keyword]:
         """Get related keywords for a given search_term.
 

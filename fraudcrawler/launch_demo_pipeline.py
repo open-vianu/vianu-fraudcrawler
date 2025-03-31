@@ -1,5 +1,6 @@
-from fraudcrawler import FraudCrawlerClient, Location, Deepness
+from fraudcrawler import FraudCrawlerClient, Language, Location, Deepness
 
+_N_HEAD = 10
 
 def main():
     # Setup the client
@@ -7,37 +8,37 @@ def main():
 
     # Setup the search
     search_term = "sildenafil"
+    language = Language(name="German")
     location = Location(name="Switzerland")
     deepness = Deepness(num_results=50)
     context = "This organization is interested in medical products and drugs."
 
     # # Optional: Add tern ENRICHEMENT
-    # from fraudcrawler import Enrichment, Language
-    # deepness.enrichement = Enrichment(
-    #     language = Language(name="German")
+    # from fraudcrawler import Enrichment
+    # deepness.enrichment = Enrichment(
     #     additional_terms=5,
-    #     additional_urls_per_term=5
+    #     additional_urls_per_term=10
     # )
-    #
 
     # # Optional: Add MARKETPLACES and EXCLUDED_URLS
-    # from fraudcrawler import Host,
+    # from fraudcrawler import Host
     # marketplaces = [
-    #     Host(name="Ricardo", domains="ricardo.ch"),
-    #     Host(name="Galaxus", domains="digitec.ch, galaxus.ch")
+    #     Host(name="International", domains="zavamed.com,apomeds.com"),
+    #     Host(name="National", domains="netdoktor.ch, nobelpharma.ch")
     # ]
     # excluded_urls = [
-    #     Host(name="Altibbi", domains="altibbi.com")
+    #     Host(name="Compendium", domains="compendium.ch")
     # ]
 
     # Run the search
     client.run(
         search_term=search_term,
+        language=language,
         location=location,
         deepness=deepness,
         context=context,
         # marketplaces=marketplaces,
-        # excluded_urls=excluded_urls
+        # excluded_urls=excluded_urls,
     )
 
     # Show results
@@ -51,7 +52,10 @@ def main():
     print(title)
     print("=" * len(title))
     df = client.load_results()
-    print(f"Number of products: {len(df)}\n")
+    print(f"Number of products found: {len(df)}")
+    print(f'Number of relevant products: {len(df[df["is_relevant"] == 1])}')
+    print()
+    print(f"First {_N_HEAD} products are:")
     print(df.head(n=10))
     print()
 

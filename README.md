@@ -33,7 +33,8 @@ client = FraudCrawlerClient()
 
 For setting up the search we need 5 main objects
 - `search_term`: The search term for the query.
-- `location`: The SerpAPI location used for the query.
+- `language`: The Language used in SerpAPI ('hl') and for related search terms (within optional enrichement)
+- `location`: The SerpAPI location ('gl') used for the query.
 - `deepness`: Defines the search depth.
 - `context`: The context prompt to use for detecting relevant products
 
@@ -41,6 +42,7 @@ For setting up the search we need 5 main objects
 from fraudcrawler import Location, Deepness
 # Setup the search
 search_term = "sildenafil"
+language = Language(name="German")
 location = Location(name="Switzerland")
 deepness = Deepness(num_results=50)
 context = "This organization is interested in medical products and drugs."
@@ -49,10 +51,9 @@ context = "This organization is interested in medical products and drugs."
 (Optional) Add search term enrichement. This will find related search terms (in a given language) and search for these as well.
 ```python
 from fraudcrawler import Enrichment
-deepness.enrichement = Enrichment(
-    language=Language(name="German")
+deepness.enrichment = Enrichment(
     additional_terms=5,
-    additional_urls_per_term=5
+    additional_urls_per_term=10
 )
 ```
 
@@ -60,15 +61,15 @@ deepness.enrichement = Enrichment(
 ```python
 from fraudcrawler import Host,
 marketplaces = [
-    Host(name="Ricardo", domains="ricardo.ch"),
-    Host(name="Galaxus", domains="digitec.ch, galaxus.ch")
+    Host(name="International", domains="zavamed.com,apomeds.com"),
+    Host(name="National", domains="netdoktor.ch, nobelpharma.ch"),
 ]
 ```
 
 (Optional) Exclude urls (where you don't want to find products)
 ```python
 excluded_urls = [
-    Host(name="Altibbi", domains="altibbi.com")
+    Host(name="Compendium", domains="compendium.ch"),
 ]
 ```
 
