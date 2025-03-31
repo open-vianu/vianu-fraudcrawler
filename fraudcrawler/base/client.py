@@ -50,7 +50,7 @@ class FraudCrawlerClient(Orchestrator):
         """
         products = []
         while True:
-            product = await queue_in.get()  # type: ProductItem | None
+            product: ProductItem = await queue_in.get()
             if product is None:
                 queue_in.task_done()
                 break
