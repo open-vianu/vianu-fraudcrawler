@@ -40,6 +40,21 @@ def main():
         # excluded_urls=excluded_urls
     )
 
+    # Show results
+    print()
+    title = "Available results"
+    print(title)
+    print("=" * len(title))
+    client.print_available_results()
+    print()
+    title = f'Results for "{search_term.upper()}"'
+    print(title)
+    print("=" * len(title))
+    df = client.load_results()
+    print(f"Number of products: {len(df)}\n")
+    print(df.head(n=10))
+    print()
+
 
 if __name__ == "__main__":
     main()

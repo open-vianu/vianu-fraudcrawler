@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "vianu-fraudcrawler"
-version = "0.2.2"
+version = "0.2.3"
 description = "Intelligent Market Monitoring"
 authors = [
     "chriguBERTO <christoph@vianu.ch>",
@@ -17,10 +17,6 @@ repository = "https://github/open-vianu/vianu-fraudcrawler"
 packages = [
     {include = "fraudcrawler", from = "."}
 ]
-include = ["data/google/images/*"]
-
-[tool.setuptools.package-data]
-"fraudcrawler" = ["docs/assets/images/*"]
 
 [tool.poetry.dependencies]
 python = "^3.11"

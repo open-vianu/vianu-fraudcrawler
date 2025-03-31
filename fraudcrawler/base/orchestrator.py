@@ -34,8 +34,15 @@ class ProductItem(BaseModel):
 class Orchestrator(ABC):
     """Abstract base class for orchestrating the different actors (crawling, processing).
 
-    For each pipeline step it will deploy a number of async workers to handle the tasks. In addition
-    it makes sure to orchestrate the canceling of the workers only after the relevant workload is done.
+    Abstract methods:
+        _collect_results: Collects the results from the given queue_in.
+
+    Each subclass of class:`Orchestrator` must implement the abstract method func:`_collect_results`.
+    This function is responsible for collecting and handling the results from the given queue_in. It might
+    save the results to a file, a database, or any other storage.
+
+    For each pipeline step class:`Orchestrator` will deploy a number of async workers to handle the tasks.
+    In addition it makes sure to orchestrate the canceling of the workers only after the relevant workload is done.
 
     For more information on the orchestrating pattern see README.md.
     """
@@ -88,15 +95,6 @@ class Orchestrator(ABC):
         self._n_proc_wkrs = n_proc_wkrs
         self._queues: Dict[str, asyncio.Queue] | None = None
         self._workers: Dict[str, List[asyncio.Task] | asyncio.Task] | None = None
-
-    @abstractmethod
-    async def _collect_results(self, queue_in: asyncio.Queue) -> None:
-        """Collects the results from the given queue_in.
-
-        Args:
-            queue_in: The input queue containing the results.
-        """
-        pass
 
     async def _serp_execute(
         self, queue_in: asyncio.Queue, queue_out: asyncio.Queue
@@ -208,6 +206,15 @@ class Orchestrator(ABC):
             except Exception as e:
                 logger.warning(f"Error processing product: {e}.")
             queue_in.task_done()
+
+    @abstractmethod
+    async def _collect_results(self, queue_in: asyncio.Queue) -> None:
+        """Collects the results from the given queue_in.
+
+        Args:
+            queue_in: The input queue containing the results.
+        """
+        pass
 
     def _setup_async_framework(
         self,
