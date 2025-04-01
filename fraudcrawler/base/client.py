@@ -25,7 +25,7 @@ class Results(BaseModel):
 class FraudCrawlerClient(Orchestrator):
     """The main client for FraudCrawler."""
 
-    _filename_template = "{search_term}_{timestamp}.csv"
+    _filename_template = "{search_term}_{language}_{location}_{timestamp}.csv"
 
     def __init__(self):
         setup = Setup()
@@ -98,6 +98,8 @@ class FraudCrawlerClient(Orchestrator):
         timestamp = datetime.today().strftime("%Y%m%d%H%M%S")
         filename = self._results_dir / self._filename_template.format(
             search_term=search_term,
+            language=language.code,
+            location=location.code,
             timestamp=timestamp,
         )
         self._results.append(Results(search_term=search_term, filename=filename))
