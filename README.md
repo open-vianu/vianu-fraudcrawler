@@ -73,10 +73,10 @@ excluded_urls = [
 ]
 ```
 
-And finally run the search
+And finally run the pipeline
 ```python
-# Run the search
-client.run(
+# Execute the pipeline
+client.execute(
     search_term=search_term,
     location=location,
     deepness=deepness,

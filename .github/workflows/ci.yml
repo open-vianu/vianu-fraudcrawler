@@ -24,9 +24,9 @@ jobs:
       run: |
         poetry run bandit -r src
     
-    # - name: Check typing
-    #   run: | 
-    #     mypy --ignore-missing-imports fraudcrawler tests
+    - name: Check typing
+      run: | 
+        mypy --ignore-missing-imports fraudcrawler tests
 
     - name: Lint with Ruff
       run: |

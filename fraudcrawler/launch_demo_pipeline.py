@@ -30,8 +30,8 @@ def main():
     #     Host(name="Compendium", domains="compendium.ch")
     # ]
 
-    # Run the search
-    client.run(
+    # Execute the pipeline
+    client.execute(
         search_term=search_term,
         language=language,
         location=location,

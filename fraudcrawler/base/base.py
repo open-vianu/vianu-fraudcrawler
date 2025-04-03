@@ -52,14 +52,14 @@ class Location(BaseModel):
     """Model for location details (e.g. `Location(name="Switzerland", code="ch")`)."""
 
     name: str
-    code: str | None = None
+    code: str = ''
 
     @model_validator(mode="before")
     def set_code(cls, values):
         """Set the location code if not provided and make it lower case."""
         name = values.get("name")
         code = values.get("code")
-        if code is None:
+        if code is None or not len(code):
             code = _LOCATION_CODES.get(name)
             if code is None:
                 raise ValueError(f'Location code not found for location name="{name}"')
@@ -71,14 +71,14 @@ class Language(BaseModel):
     """Model for language details (e.g. `Language(name="German", code="de")`)."""
 
     name: str
-    code: str | None = None
+    code: str = ''
 
     @model_validator(mode="before")
     def set_code(cls, values):
         """Set the language code if not provided and make it lower case."""
         name = values.get("name")
         code = values.get("code")
-        if code is None:
+        if code is None or not len(code):
             code = _LANGUAGE_CODES.get(name)
             if code is None:
                 raise ValueError(f'Language code not found for language name="{name}"')
@@ -120,7 +120,7 @@ class AsyncClient:
     async def post(
         url: str,
         headers: dict | None = None,
-        data: dict | None = None,
+        data: List[dict] | dict | None = None,
         auth: aiohttp.BasicAuth | None = None,
     ) -> dict:
         """Async POST request of a given URL returning the data."""

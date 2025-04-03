@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import asyncio
 import logging
 from pydantic import BaseModel
-from typing import Dict, List, Set
+from typing import Dict, List, Set, cast
 
 from fraudcrawler.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY
 from fraudcrawler.settings import N_SERP_WKRS, N_ZYTE_WKRS, N_PROC_WKRS
@@ -222,7 +222,7 @@ class Orchestrator(ABC):
         n_zyte_wkrs: int,
         n_proc_wkrs: int,
         context: str,
-    ) -> List[asyncio.Queue]:
+    ) -> None:
         """Sets up the necessary queues and workers for the async framework.
 
         Args:
@@ -233,11 +233,11 @@ class Orchestrator(ABC):
         """
 
         # Setup the input/output queues for the workers
-        serp_queue = asyncio.Queue()
-        url_queue = asyncio.Queue()
-        zyte_queue = asyncio.Queue()
-        proc_queue = asyncio.Queue()
-        res_queue = asyncio.Queue()
+        serp_queue: asyncio.Queue = asyncio.Queue()
+        url_queue: asyncio.Queue = asyncio.Queue()
+        zyte_queue: asyncio.Queue = asyncio.Queue()
+        proc_queue: asyncio.Queue = asyncio.Queue()
+        res_queue: asyncio.Queue = asyncio.Queue()
 
         # Setup the Serp workers
         serp_wkrs = [
@@ -282,14 +282,14 @@ class Orchestrator(ABC):
         res_col = asyncio.create_task(self._collect_results(queue_in=res_queue))
 
         # Add the setup to the instance variables
-        self._queues: Dict[str, asyncio.Queue] = {
+        self._queues = {
             "serp": serp_queue,
             "url": url_queue,
             "zyte": zyte_queue,
             "proc": proc_queue,
             "res": res_queue,
         }
-        self._workers: Dict[str, List[asyncio.Task] | asyncio.Task] = {
+        self._workers = {
             "serp": serp_wkrs,
             "url": url_col,
             "zyte": zyte_wkrs,
@@ -324,7 +324,7 @@ class Orchestrator(ABC):
     async def _add_serp_items(
         self,
         queue: asyncio.Queue,
-        search_term: str | List[str],
+        search_term: str,
         language: Language,
         location: Location,
         deepness: Deepness,
@@ -345,7 +345,7 @@ class Orchestrator(ABC):
             search_term=search_term,
             search_term_type="initial",
             num_results=deepness.num_results,
-            **common_kwargs,
+            **common_kwargs,        # type: ignore[arg-type]
         )
 
         # Enrich the search_terms
@@ -366,7 +366,7 @@ class Orchestrator(ABC):
                     search_term=trm,
                     search_term_type="enriched",
                     num_results=enrichment.additional_urls_per_term,
-                    **common_kwargs,
+                    **common_kwargs,        # type: ignore[arg-type]
                 )
 
     async def run(
@@ -411,6 +411,16 @@ class Orchestrator(ABC):
             context=context,
         )
 
+        # Check if the async setup
+        if self._queues is None or self._workers is None:
+            raise ValueError(
+                "Async framework is not setup. Please call _setup_async_framework() first."
+            )
+        if not all([k in self._queues for k in ["serp", "url", "zyte", "proc", "res"]]):
+            raise ValueError("The queues of the async framework are not setup correctly.")
+        if not all([k in self._workers for k in ["serp", "url", "zyte", "proc", "res"]]):
+            raise ValueError("The workers of the async framework are not setup correctly.")
+
         # Add the search terms to the serp_queue
         serp_queue = self._queues["serp"]
         await self._add_serp_items(
@@ -452,7 +462,7 @@ class Orchestrator(ABC):
         await url_queue.put(None)
 
         # Wait for the url_collector to be concluded before adding the sentinels to the zyte_queue
-        url_collector = self._workers["url"]
+        url_collector = cast(asyncio.Task, self._workers["url"])
         try:
             logger.debug("Waiting for url_collector to conclude its tasks...")
             await url_collector
@@ -514,7 +524,7 @@ class Orchestrator(ABC):
         await res_queue.put(None)
 
         # Wait for the res_collector to be concluded
-        res_collector = self._workers["res"]
+        res_collector = cast(asyncio.Task, self._workers["res"])
         try:
             logger.debug("Waiting for res_collector to conclude its tasks...")
             await res_collector

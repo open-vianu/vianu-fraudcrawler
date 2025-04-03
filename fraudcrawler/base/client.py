@@ -22,9 +22,9 @@ class Results(BaseModel):
     filename: Path | None = None
 
 
-class FraudCrawlerClient(Orchestrator):
+class FraudCrawlerClient(Orchestrator): 
     """The main client for FraudCrawler."""
-
+    
     _filename_template = "{search_term}_{language}_{location}_{timestamp}.csv"
 
     def __init__(self):
@@ -74,7 +74,7 @@ class FraudCrawlerClient(Orchestrator):
         df.to_csv(filename, index=False)
         logger.info(f"Results saved to {filename}")
 
-    def run(
+    def execute(
         self,
         search_term: str,
         language: Language,
@@ -83,7 +83,7 @@ class FraudCrawlerClient(Orchestrator):
         context: str,
         marketplaces: List[Host] | None = None,
         excluded_urls: List[Host] | None = None,
-    ) -> None:
+    ) -> None:                                      
         """Runs the pipeline steps: serp, enrich, zyte, process, and collect the results.
 
         Args:

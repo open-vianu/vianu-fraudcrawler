@@ -90,6 +90,7 @@ class ZyteApi(AsyncClient):
                 await asyncio.sleep(self._retry_delay)
         if err is not None:
             raise err
+        return {}
 
     @staticmethod
     def keep_product(

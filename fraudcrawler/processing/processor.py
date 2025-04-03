@@ -60,7 +60,11 @@ class Processor:
                 max_tokens=1,  # Ensuring a short response
             )
 
-            classification = response.choices[0].message.content.strip()
+            # Extract and validate the response
+            content = response.choices[0].message.content
+            if not content:
+                raise ValueError("Empty response from OpenAI API")
+            classification = content.strip()
             if classification not in ["0", "1"]:
                 raise ValueError(
                     f"Unexpected response from OpenAI API: {classification}"
