@@ -4,8 +4,8 @@ import logging
 from pydantic import BaseModel
 from typing import Dict, List, Set, cast
 
-from fraudcrawler.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY
-from fraudcrawler.settings import N_SERP_WKRS, N_ZYTE_WKRS, N_PROC_WKRS
+from fraudcrawler.settings import PROCESSOR_DEFAULT_MODEL, MAX_RETRIES, RETRY_DELAY
+from fraudcrawler.settings import DEFAULT_N_SERP_WKRS, DEFAULT_N_ZYTE_WKRS, DEFAULT_N_PROC_WKRS
 from fraudcrawler.base.base import Deepness, Host, Language, Location
 from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
 
@@ -25,6 +25,7 @@ class ProductItem(BaseModel):
     product_name: str | None = None
     product_price: str | None = None
     product_description: str | None = None
+    product_images: List[str] | None = None
     probability: float | None = None
 
     # Processor parameters
@@ -54,12 +55,12 @@ class Orchestrator(ABC):
         dataforseo_pwd: str,
         zyteapi_key: str,
         openaiapi_key: str,
-        openai_model: str = PROCESSOR_MODEL,
+        openai_model: str = PROCESSOR_DEFAULT_MODEL,
         max_retries: int = MAX_RETRIES,
         retry_delay: int = RETRY_DELAY,
-        n_serp_wkrs: int = N_SERP_WKRS,
-        n_zyte_wkrs: int = N_ZYTE_WKRS,
-        n_proc_wkrs: int = N_PROC_WKRS,
+        n_serp_wkrs: int = DEFAULT_N_SERP_WKRS,
+        n_zyte_wkrs: int = DEFAULT_N_ZYTE_WKRS,
+        n_proc_wkrs: int = DEFAULT_N_PROC_WKRS,
     ):
         """Initializes the orchestrator with the given settings.
 
@@ -97,7 +98,9 @@ class Orchestrator(ABC):
         self._workers: Dict[str, List[asyncio.Task] | asyncio.Task] | None = None
 
     async def _serp_execute(
-        self, queue_in: asyncio.Queue, queue_out: asyncio.Queue
+        self,
+        queue_in: asyncio.Queue[dict | None],
+        queue_out: asyncio.Queue[ProductItem | None],
     ) -> None:
         """Collects the SerpApi search setups from the queue_in, executes the search, filters the results (country_code) and puts them into queue_out.
 
@@ -127,7 +130,9 @@ class Orchestrator(ABC):
             queue_in.task_done()
 
     async def _collect_url(
-        self, queue_in: asyncio.Queue, queue_out: asyncio.Queue
+        self,
+        queue_in: asyncio.Queue[ProductItem | None],
+        queue_out: asyncio.Queue[ProductItem | None],
     ) -> None:
         """Collects the URLs from the given queue_in, checks for duplicates, and puts them into the queue_out.
 
@@ -148,7 +153,9 @@ class Orchestrator(ABC):
             queue_in.task_done()
 
     async def _zyte_execute(
-        self, queue_in: asyncio.Queue, queue_out: asyncio.Queue
+        self,
+        queue_in: asyncio.Queue[ProductItem | None],
+        queue_out: asyncio.Queue[ProductItem | None],
     ) -> None:
         """Collects the URLs from the queue_in, enriches it with product details metadata, filters them (probability), and puts them into queue_out.
 
@@ -165,10 +172,11 @@ class Orchestrator(ABC):
             try:
                 details = await self._zyteapi.get_details(url=product.url)
                 if self._zyteapi.keep_product(details=details):
-                    product.product_name = details["product"].get("name")
-                    product.product_price = details["product"].get("price")
-                    product.product_description = details["product"].get("description")
-                    product.probability = details["product"]["metadata"]["probability"]
+                    product.product_name = self._zyteapi.extract_product_name(details=details)
+                    product.product_price = self._zyteapi.extract_product_price(details=details) 
+                    product.product_description = self._zyteapi.extract_product_description(details=details)
+                    product.product_images = self._zyteapi.extract_image_urls(details=details)
+                    product.probability = self._zyteapi.extract_probability(details=details)
                     await queue_out.put(product)
                 else:
                     logger.debug(
@@ -179,7 +187,10 @@ class Orchestrator(ABC):
             queue_in.task_done()
 
     async def _proc_execute(
-        self, queue_in: asyncio.Queue, queue_out: asyncio.Queue, context: str
+        self,
+        queue_in: asyncio.Queue[ProductItem | None],
+        queue_out: asyncio.Queue[ProductItem | None],
+        context: str
     ) -> None:
         """Collects the product details from the queue_in, processes them (filtering, relevance, etc.) and puts the results into queue_out.
 
@@ -208,7 +219,7 @@ class Orchestrator(ABC):
             queue_in.task_done()
 
     @abstractmethod
-    async def _collect_results(self, queue_in: asyncio.Queue) -> None:
+    async def _collect_results(self, queue_in: asyncio.Queue[ProductItem | None]) -> None:
         """Collects the results from the given queue_in.
 
         Args:
@@ -233,11 +244,11 @@ class Orchestrator(ABC):
         """
 
         # Setup the input/output queues for the workers
-        serp_queue: asyncio.Queue = asyncio.Queue()
-        url_queue: asyncio.Queue = asyncio.Queue()
-        zyte_queue: asyncio.Queue = asyncio.Queue()
-        proc_queue: asyncio.Queue = asyncio.Queue()
-        res_queue: asyncio.Queue = asyncio.Queue()
+        serp_queue: asyncio.Queue[dict | None] = asyncio.Queue()
+        url_queue: asyncio.Queue[ProductItem | None] = asyncio.Queue()
+        zyte_queue: asyncio.Queue[ProductItem | None] = asyncio.Queue()
+        proc_queue: asyncio.Queue[ProductItem | None] = asyncio.Queue()
+        res_queue: asyncio.Queue[ProductItem | None] = asyncio.Queue()
 
         # Setup the Serp workers
         serp_wkrs = [
@@ -299,7 +310,7 @@ class Orchestrator(ABC):
 
     @staticmethod
     async def _add_serp_items_for_search_term(
-        queue: asyncio.Queue,
+        queue: asyncio.Queue[dict | None],
         search_term: str,
         search_term_type: str,
         language: Language,
@@ -323,7 +334,7 @@ class Orchestrator(ABC):
 
     async def _add_serp_items(
         self,
-        queue: asyncio.Queue,
+        queue: asyncio.Queue[dict | None],
         search_term: str,
         language: Language,
         location: Location,

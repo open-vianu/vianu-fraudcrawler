@@ -1,6 +1,6 @@
 import pytest
 
-from fraudcrawler.settings import PROCESSOR_MODEL
+from fraudcrawler.settings import PROCESSOR_DEFAULT_MODEL
 from fraudcrawler.base.base import Setup
 from fraudcrawler import Processor
 
@@ -8,7 +8,7 @@ from fraudcrawler import Processor
 @pytest.fixture
 def processor():
     setup = Setup()
-    processor = Processor(api_key=setup.openaiapi_key, model=PROCESSOR_MODEL)
+    processor = Processor(api_key=setup.openaiapi_key, model=PROCESSOR_DEFAULT_MODEL)
     return processor
 
 
