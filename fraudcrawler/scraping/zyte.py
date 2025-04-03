@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import List
 
 import aiohttp
 
@@ -110,3 +111,81 @@ class ZyteApi(AsyncClient):
             )
             return False
         return prob > threshold
+    
+
+    @staticmethod
+    def extract_product_name(details: dict) -> str | None:
+        """Extracts the product name from the product data.
+
+        The input argument is a dictionary of the following structure:
+            {
+                "product": {
+                    "name": str,
+                }
+            }
+        """
+        return details.get("product", {}).get("name")
+    
+    @staticmethod
+    def extract_product_price(details: dict) -> str | None:
+        """Extracts the product price from the product data.
+
+        The input argument is a dictionary of the following structure:
+            {
+                "product": {
+                    "price": str,
+                }
+            }
+        """
+        return details.get("product", {}).get("price")
+    
+    @staticmethod
+    def extract_product_description(details: dict) -> str | None:
+        """Extracts the product description from the product data.
+
+        The input argument is a dictionary of the following structure:
+            {
+                "product": {
+                    "description": str,
+                }
+            }
+        """
+        return details.get("product", {}).get("description")
+
+    @staticmethod
+    def extract_image_urls(details: dict) -> List[str]:
+        """Extracts the images from the product data.
+
+        The input argument is a dictionary of the following structure:
+            {
+                "product": {
+                    "mainImage": {"url": str},
+                    "images": [{"url": str}],
+                }
+            }
+        """
+        urls = []
+        product = details.get("product")
+        if product:
+            # Extract main image URL
+            if (main_img := details.get("product")):
+                urls.append(main_img.get("url"))
+            # Extract additional image URLs
+            if (urls := details.get("product", {}).get("images")):
+                urls.extend([img["url"] for img in urls if img.get("url")])
+        return urls
+    
+    @staticmethod
+    def extract_probability(details: dict) -> float:
+        """Extracts the probability from the product data.
+
+        The input argument is a dictionary of the following structure:
+            {
+                "product": {
+                    "metadata": {
+                        "probability": float,
+                    }
+                }
+            }
+        """
+        return float(details.get("product", {}).get("metadata", {}).get("probability"))

@@ -25,6 +25,7 @@ class ProductItem(BaseModel):
     product_name: str | None = None
     product_price: str | None = None
     product_description: str | None = None
+    product_images: List[str] | None = None
     probability: float | None = None
 
     # Processor parameters
@@ -171,10 +172,11 @@ class Orchestrator(ABC):
             try:
                 details = await self._zyteapi.get_details(url=product.url)
                 if self._zyteapi.keep_product(details=details):
-                    product.product_name = details["product"].get("name")
-                    product.product_price = details["product"].get("price")
-                    product.product_description = details["product"].get("description")
-                    product.probability = details["product"]["metadata"]["probability"]
+                    product.product_name = self._zyteapi.extract_product_name(details=details)
+                    product.product_price = self._zyteapi.extract_product_price(details=details) 
+                    product.product_description = self._zyteapi.extract_product_description(details=details)
+                    product.product_images = self._zyteapi.extract_image_urls(details=details)
+                    product.probability = self._zyteapi.extract_probability(details=details)
                     await queue_out.put(product)
                 else:
                     logger.debug(
