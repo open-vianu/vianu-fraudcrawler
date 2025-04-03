@@ -4,8 +4,8 @@ import logging
 from pydantic import BaseModel
 from typing import Dict, List, Set, cast
 
-from fraudcrawler.settings import PROCESSOR_MODEL, MAX_RETRIES, RETRY_DELAY
-from fraudcrawler.settings import N_SERP_WKRS, N_ZYTE_WKRS, N_PROC_WKRS
+from fraudcrawler.settings import PROCESSOR_DEFAULT_MODEL, MAX_RETRIES, RETRY_DELAY
+from fraudcrawler.settings import DEFAULT_N_SERP_WKRS, DEFAULT_N_ZYTE_WKRS, DEFAULT_N_PROC_WKRS
 from fraudcrawler.base.base import Deepness, Host, Language, Location
 from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
 
@@ -54,12 +54,12 @@ class Orchestrator(ABC):
         dataforseo_pwd: str,
         zyteapi_key: str,
         openaiapi_key: str,
-        openai_model: str = PROCESSOR_MODEL,
+        openai_model: str = PROCESSOR_DEFAULT_MODEL,
         max_retries: int = MAX_RETRIES,
         retry_delay: int = RETRY_DELAY,
-        n_serp_wkrs: int = N_SERP_WKRS,
-        n_zyte_wkrs: int = N_ZYTE_WKRS,
-        n_proc_wkrs: int = N_PROC_WKRS,
+        n_serp_wkrs: int = DEFAULT_N_SERP_WKRS,
+        n_zyte_wkrs: int = DEFAULT_N_ZYTE_WKRS,
+        n_proc_wkrs: int = DEFAULT_N_PROC_WKRS,
     ):
         """Initializes the orchestrator with the given settings.
 

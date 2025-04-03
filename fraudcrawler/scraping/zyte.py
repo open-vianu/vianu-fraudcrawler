@@ -3,7 +3,7 @@ import logging
 
 import aiohttp
 
-from fraudcrawler.settings import MAX_RETRIES, RETRY_DELAY, ZYTE_PROBABILITY_THRESHOLD
+from fraudcrawler.settings import MAX_RETRIES, RETRY_DELAY, ZYTE_DEFALUT_PROBABILITY_THRESHOLD
 from fraudcrawler.base.base import AsyncClient
 
 logger = logging.getLogger(__name__)
@@ -94,7 +94,7 @@ class ZyteApi(AsyncClient):
 
     @staticmethod
     def keep_product(
-        details: dict, threshold: float = ZYTE_PROBABILITY_THRESHOLD
+        details: dict, threshold: float = ZYTE_DEFALUT_PROBABILITY_THRESHOLD
     ) -> bool:
         """Determines whether to keep the product based on the probability threshold.
 
