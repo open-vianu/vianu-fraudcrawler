@@ -42,7 +42,7 @@ class FraudCrawlerClient(Orchestrator):
             self._results_dir.mkdir(parents=True)
         self._results: List[Results] = []
 
-    async def _collect_results(self, queue_in):
+    async def _collect_results(self, queue_in: asyncio.Queue[ProductItem | None]) -> None:
         """Collects the results from the given queue_in and saves it as csv.
 
         Args:
@@ -50,7 +50,7 @@ class FraudCrawlerClient(Orchestrator):
         """
         products = []
         while True:
-            product: ProductItem | None = await queue_in.get()
+            product = await queue_in.get()
             if product is None:
                 queue_in.task_done()
                 break
