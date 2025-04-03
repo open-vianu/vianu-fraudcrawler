@@ -97,7 +97,9 @@ class Orchestrator(ABC):
         self._workers: Dict[str, List[asyncio.Task] | asyncio.Task] | None = None
 
     async def _serp_execute(
-        self, queue_in: asyncio.Queue, queue_out: asyncio.Queue
+        self,
+        queue_in: asyncio.Queue[dict | None],
+        queue_out: asyncio.Queue[ProductItem | None],
     ) -> None:
         """Collects the SerpApi search setups from the queue_in, executes the search, filters the results (country_code) and puts them into queue_out.
 
@@ -127,7 +129,9 @@ class Orchestrator(ABC):
             queue_in.task_done()
 
     async def _collect_url(
-        self, queue_in: asyncio.Queue, queue_out: asyncio.Queue
+        self,
+        queue_in: asyncio.Queue[ProductItem | None],
+        queue_out: asyncio.Queue[ProductItem | None],
     ) -> None:
         """Collects the URLs from the given queue_in, checks for duplicates, and puts them into the queue_out.
 
@@ -148,7 +152,9 @@ class Orchestrator(ABC):
             queue_in.task_done()
 
     async def _zyte_execute(
-        self, queue_in: asyncio.Queue, queue_out: asyncio.Queue
+        self,
+        queue_in: asyncio.Queue[ProductItem | None],
+        queue_out: asyncio.Queue[ProductItem | None],
     ) -> None:
         """Collects the URLs from the queue_in, enriches it with product details metadata, filters them (probability), and puts them into queue_out.
 
@@ -179,7 +185,10 @@ class Orchestrator(ABC):
             queue_in.task_done()
 
     async def _proc_execute(
-        self, queue_in: asyncio.Queue, queue_out: asyncio.Queue, context: str
+        self,
+        queue_in: asyncio.Queue[ProductItem | None],
+        queue_out: asyncio.Queue[ProductItem | None],
+        context: str
     ) -> None:
         """Collects the product details from the queue_in, processes them (filtering, relevance, etc.) and puts the results into queue_out.
 
@@ -208,7 +217,7 @@ class Orchestrator(ABC):
             queue_in.task_done()
 
     @abstractmethod
-    async def _collect_results(self, queue_in: asyncio.Queue) -> None:
+    async def _collect_results(self, queue_in: asyncio.Queue[ProductItem | None]) -> None:
         """Collects the results from the given queue_in.
 
         Args:
@@ -233,11 +242,11 @@ class Orchestrator(ABC):
         """
 
         # Setup the input/output queues for the workers
-        serp_queue: asyncio.Queue = asyncio.Queue()
-        url_queue: asyncio.Queue = asyncio.Queue()
-        zyte_queue: asyncio.Queue = asyncio.Queue()
-        proc_queue: asyncio.Queue = asyncio.Queue()
-        res_queue: asyncio.Queue = asyncio.Queue()
+        serp_queue: asyncio.Queue[dict | None] = asyncio.Queue()
+        url_queue: asyncio.Queue[ProductItem | None] = asyncio.Queue()
+        zyte_queue: asyncio.Queue[ProductItem | None] = asyncio.Queue()
+        proc_queue: asyncio.Queue[ProductItem | None] = asyncio.Queue()
+        res_queue: asyncio.Queue[ProductItem | None] = asyncio.Queue()
 
         # Setup the Serp workers
         serp_wkrs = [
@@ -299,7 +308,7 @@ class Orchestrator(ABC):
 
     @staticmethod
     async def _add_serp_items_for_search_term(
-        queue: asyncio.Queue,
+        queue: asyncio.Queue[dict | None],
         search_term: str,
         search_term_type: str,
         language: Language,
@@ -323,7 +332,7 @@ class Orchestrator(ABC):
 
     async def _add_serp_items(
         self,
-        queue: asyncio.Queue,
+        queue: asyncio.Queue[dict | None],
         search_term: str,
         language: Language,
         location: Location,
