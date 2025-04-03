@@ -26,7 +26,7 @@ jobs:
     
     - name: Check typing
       run: | 
-        mypy --ignore-missing-imports fraudcrawler tests
+        poetry run mypy --ignore-missing-imports fraudcrawler tests
 
     - name: Lint with Ruff
       run: |
