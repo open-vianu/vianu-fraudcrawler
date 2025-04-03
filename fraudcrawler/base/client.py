@@ -55,18 +55,7 @@ class FraudCrawlerClient(Orchestrator):
                 queue_in.task_done()
                 break
 
-            row = {
-                "search_term": product.search_term,
-                "search_term_type": product.search_term_type,
-                "url": product.url,
-                "marketplace_name": product.marketplace_name,
-                "product_name": product.product_name,
-                "product_price": product.product_price,
-                "product_description": product.product_description,
-                "probability": product.probability,
-                "is_relevant": product.is_relevant,
-            }
-            products.append(row)
+            products.append(product.model_dump())
             queue_in.task_done()
 
         df = pd.DataFrame(products)

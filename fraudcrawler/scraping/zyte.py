@@ -164,16 +164,16 @@ class ZyteApi(AsyncClient):
                 }
             }
         """
-        urls = []
+        images = []
         product = details.get("product")
         if product:
             # Extract main image URL
-            if (main_img := details.get("product")):
-                urls.append(main_img.get("url"))
+            if (main_img := product.get("mainImage")) and (url := main_img.get("url")):
+                images.append(url)
             # Extract additional image URLs
-            if (urls := details.get("product", {}).get("images")):
-                urls.extend([img["url"] for img in urls if img.get("url")])
-        return urls
+            if (urls := product.get("images")):
+                images.extend([img["url"] for img in urls if img.get("url")])
+        return images
     
     @staticmethod
     def extract_probability(details: dict) -> float:
