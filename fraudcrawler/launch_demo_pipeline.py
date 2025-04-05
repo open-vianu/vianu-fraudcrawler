@@ -54,6 +54,7 @@ def main():
     df = client.load_results()
     print(f"Number of products found: {len(df)}")
     print(f'Number of relevant products: {len(df[df["is_relevant"] == 1])}')
+    print(f'Number of products in marketplaces: {len(df[df["is_product"] == 1])}')
     print()
     print(f"First {_N_HEAD} products are:")
     print(df.head(n=_N_HEAD))

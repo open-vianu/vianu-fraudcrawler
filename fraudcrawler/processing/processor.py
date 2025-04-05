@@ -23,12 +23,20 @@ class Processor:
     )
 
     _product_system_prompt = (
-        "You are a helpful and intelligent assistant. Your task is to classify any given product "
-        "as either a product (1) or not a product (0), strictly based on the context and product details provided by the user. "
-        "You must consider all aspects of the given context and make a binary decision accordingly. "
-        "If the product aligns with the user's needs, classify it as 1 (product); otherwise, classify it as 0 (not a product). "
-        "Respond only with the number 1 or 0."
+        "You are an intelligent and discerning assistant. Your task is to classify each item as either "
+        "a product for sale (1) or not a product for sale (0). To make this distinction, consider the following criteria: \n"
+        "    1 Product for Sale (1): Classify as 1 if the result clearly indicates an item available for purchase, typically found  "
+        "within an online shop or marketplace.\n"
+        "    2 Not a Product for Sale (0): Classify as 0 if the result is unrelated to a direct purchase of a product. This includes items such as: \n"
+        "        - Books and Videos: These may be available for sale, but if they are about or related to the searched product rather than being the "
+        "exact product itself, classify as 0.\n"
+        "        - Advertisements: Promotional content that doesn't directly sell a product.\n"
+        "        - Companies and Services: Names and descriptions of companies or services related to the product but not the product itself.\n"
+        "        - Related Topics/Content: Any text or media that discusses or elaborates on the topic without offering a tangible product for sale.\n"
+        "Make your decision based solely on the context and details provided in the search result. Respond only with the number 1 or 0."
     )
+
+    
     _product_user_prompt_template = (
         "Context: {context}\n\nProduct Details: {url}\n{name}\n{description}\n\nProduct:"
     )
