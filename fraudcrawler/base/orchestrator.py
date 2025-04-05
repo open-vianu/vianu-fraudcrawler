@@ -30,6 +30,7 @@ class ProductItem(BaseModel):
 
     # Processor parameters
     is_relevant: int | None = None
+    is_product: int | None = None
 
 
 class Orchestrator(ABC):
@@ -208,10 +209,14 @@ class Orchestrator(ABC):
                 break
 
             try:
+                url = product.url
                 name = product.product_name
                 description = product.product_description
-                product.is_relevant = await self._processor.classify_product(
+                product.is_relevant = await self._processor.is_relevant(
                     context=context, name=name, description=description
+                )
+                product.is_product = await self._processor.is_product(
+                    context=context, url=url, name=name, description=description
                 )
                 await queue_out.put(product)
             except Exception as e:
