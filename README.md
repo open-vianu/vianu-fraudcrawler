@@ -78,6 +78,7 @@ And finally run the pipeline
 # Execute the pipeline
 client.execute(
     search_term=search_term,
+    language=language,
     location=location,
     deepness=deepness,
     context=context,
