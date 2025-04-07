@@ -39,7 +39,7 @@ For setting up the search we need 5 main objects
 - `context`: The context prompt to use for detecting relevant products
 
 ```python
-from fraudcrawler import Location, Deepness
+from fraudcrawler import Language, Location, Deepness
 # Setup the search
 search_term = "sildenafil"
 language = Language(name="German")
@@ -59,7 +59,7 @@ deepness.enrichment = Enrichment(
 
 (Optional) Add marketplaces where we explicitely want to look for (this will focus your search as the :site parameter for a google search)
 ```python
-from fraudcrawler import Host,
+from fraudcrawler import Host
 marketplaces = [
     Host(name="International", domains="zavamed.com,apomeds.com"),
     Host(name="National", domains="netdoktor.ch, nobelpharma.ch"),
