@@ -22,7 +22,7 @@ jobs:
     - name: Python Vulnerability Check
       # bandit exits by defaul with status 1 if a vulerability was found. Status unequal to 0 lead to a github action failure
       run: |
-        poetry run bandit -r src
+        poetry run bandit -r fraudcrawler
     
     - name: Check typing
       run: | 
