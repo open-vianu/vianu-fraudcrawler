@@ -1,6 +1,5 @@
 import logging
 
-from fraudcrawler.settings import LOG_LVL, LOG_FMT, LOG_DATE_FMT
 from fraudcrawler.scraping.serp import SerpApi
 from fraudcrawler.scraping.enrich import Enricher
 from fraudcrawler.scraping.zyte import ZyteApi
@@ -16,16 +15,7 @@ from fraudcrawler.base.base import (
     Prompt,
 )
 
-logging.basicConfig(level=LOG_LVL.upper(), format=LOG_FMT, datefmt=LOG_DATE_FMT)
-logger = logging.getLogger(__name__)
-
-# Avoid noisy logs from hpack, httpcore, urllib3, and openai (make it at least logger.INFO)
-level = max(getattr(logging, LOG_LVL), 20)
-logging.getLogger("hpack").setLevel(level=level)
-logging.getLogger("httpcore").setLevel(level=level)
-logging.getLogger("urllib3").setLevel(level=level)
-logging.getLogger("openai").setLevel(level=level)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('fraudcrawler')
 
 __all__ = [
     "SerpApi",
