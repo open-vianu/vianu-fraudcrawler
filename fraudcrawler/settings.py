@@ -1,9 +1,6 @@
 from pathlib import Path
 
 # Generic settings
-LOG_FMT = "%(asctime)s | %(name)s | %(funcName)s | %(levelname)s | %(message)s"
-LOG_LVL = "DEBUG"
-LOG_DATE_FMT = "%Y-%m-%d %H:%M:%S"
 MAX_RETRIES = 3
 RETRY_DELAY = 2
 ROOT_DIR = Path(__file__).parents[1]
