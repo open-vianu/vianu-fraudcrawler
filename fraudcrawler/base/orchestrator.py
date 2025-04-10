@@ -28,9 +28,8 @@ class ProductItem(BaseModel):
     product_images: List[str] | None = None
     probability: float | None = None
 
-    # Processor parameters
-    is_relevant: int | None = None
-    is_product: int | None = None
+    # Processor parameters are set dynamic so we must allow extra fields
+    classifications: Dict[str, int] = {}
 
 
 class Orchestrator(ABC):
@@ -191,20 +190,22 @@ class Orchestrator(ABC):
         self,
         queue_in: asyncio.Queue[ProductItem | None],
         queue_out: asyncio.Queue[ProductItem | None],
-        context: str
+        prompts: List[dict]
     ) -> None:
         """Collects the product details from the queue_in, processes them (filtering, relevance, etc.) and puts the results into queue_out.
 
         Args:
             queue_in: The input queue containing the product details.
             queue_out: The output queue to put the processed product details.
-            context: The context to use for the processing.
+            prompts: The list of prompts to use for the processing.
         """
 
         # Process the products
+
         while True:
             product = await queue_in.get()
             if product is None:
+                # End of queue signal
                 queue_in.task_done()
                 break
 
@@ -212,15 +213,28 @@ class Orchestrator(ABC):
                 url = product.url
                 name = product.product_name
                 description = product.product_description
-                product.is_relevant = await self._processor.is_relevant(
-                    context=context, name=name, description=description
+
+                # Run all the configured prompts
+                for prompt_def in prompts:
+                    classification_result = await self._processor.classify(
+                        prompt=prompt_def,
+                        url=url,
+                        name=name,
+                        description=description,
+                    )
+                    product.classifications[prompt_def["prompt_name"]] = classification_result
+                
+                # Set "relevance (AND)" to 1 only if all original classifications are 1
+                product.classifications["relevance (AND)"] = int(
+                    all(value == 1 for key, value in product.classifications.items() if not key.startswith("relevance (AND"))
                 )
-                product.is_product = await self._processor.is_product(
-                    context=context, url=url, name=name, description=description
-                )
+                
+                # Finally put the product in output queue
                 await queue_out.put(product)
+
             except Exception as e:
-                logger.warning(f"Error processing product: {e}.")
+                logger.warning(f"Error processing product: {e}")
+
             queue_in.task_done()
 
     @abstractmethod
@@ -237,7 +251,7 @@ class Orchestrator(ABC):
         n_serp_wkrs: int,
         n_zyte_wkrs: int,
         n_proc_wkrs: int,
-        context: str,
+        prompts: List[dict],
     ) -> None:
         """Sets up the necessary queues and workers for the async framework.
 
@@ -245,7 +259,7 @@ class Orchestrator(ABC):
             n_serp_wkrs: Number of async workers for serp.
             n_zyte_wkrs: Number of async workers for zyte.
             n_proc_wkrs: Number of async workers for processor.
-            context: The context used by the LLM for determining if a product is suspicious (func:`Processor.classify_product`).
+            prompts: The list of prompts used by the LLM for determining relevance (func:`Processor.classify`).
         """
 
         # Setup the input/output queues for the workers
@@ -288,7 +302,7 @@ class Orchestrator(ABC):
                 self._proc_execute(
                     queue_in=proc_queue,
                     queue_out=res_queue,
-                    context=context,
+                    prompts=prompts,
                 )
             )
             for _ in range(n_proc_wkrs)
@@ -391,7 +405,7 @@ class Orchestrator(ABC):
         language: Language,
         location: Location,
         deepness: Deepness,
-        context: str,
+        prompts: List[dict],
         marketplaces: List[Host] | None = None,
         excluded_urls: List[Host] | None = None,
     ) -> None:
@@ -402,7 +416,7 @@ class Orchestrator(ABC):
             language: The language to use for the query.
             location: The location to use for the query.
             deepness: The search depth and enrichment details.
-            context: The context prompt to use for detecting relevant products.
+            prompts: The list of prompt to use for determining relevance.
             marketplaces: The marketplaces to include in the search.
             excluded_urls: The URLs to exclude from the search.
         """
@@ -424,7 +438,7 @@ class Orchestrator(ABC):
             n_serp_wkrs=n_serp_wkrs,
             n_zyte_wkrs=n_zyte_wkrs,
             n_proc_wkrs=n_proc_wkrs,
-            context=context,
+            prompts=prompts,
         )
 
         # Check if the async setup

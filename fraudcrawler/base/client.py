@@ -25,7 +25,7 @@ class Results(BaseModel):
 class FraudCrawlerClient(Orchestrator): 
     """The main client for FraudCrawler."""
     
-    _filename_template = "{search_term}_{language}_{location}_{timestamp}.csv"
+    _filename_template = "{search_term}_{language}_{location}_{timestamp}.xlsx"
 
     def __init__(self):
         setup = Setup()
@@ -43,7 +43,7 @@ class FraudCrawlerClient(Orchestrator):
         self._results: List[Results] = []
 
     async def _collect_results(self, queue_in: asyncio.Queue[ProductItem | None]) -> None:
-        """Collects the results from the given queue_in and saves it as csv.
+        """Collects the results from the given queue_in and saves it as excel.
 
         Args:
             queue_in: The input queue containing the results.
@@ -59,8 +59,13 @@ class FraudCrawlerClient(Orchestrator):
             queue_in.task_done()
 
         df = pd.DataFrame(products)
+
+        #Expand the classification column into seperated columns
+        classification_df = df['classifications'].apply(pd.Series)
+        df = pd.concat([df.drop(columns=['classifications']), classification_df], axis=1)
+
         filename = self._results[-1].filename
-        df.to_csv(filename, index=False)
+        df.to_excel(filename)
         logger.info(f"Results saved to {filename}")
 
     def execute(
@@ -69,7 +74,7 @@ class FraudCrawlerClient(Orchestrator):
         language: Language,
         location: Location,
         deepness: Deepness,
-        context: str,
+        prompts: List[dict],
         marketplaces: List[Host] | None = None,
         excluded_urls: List[Host] | None = None,
     ) -> None:                                      
@@ -80,7 +85,7 @@ class FraudCrawlerClient(Orchestrator):
             language: The language to use for the query.
             location: The location to use for the query.
             deepness: The search depth and enrichment details.
-            context: The context prompt to use for detecting relevant products.
+            prompts: The list of prompts to use for determining relevance.
             marketplaces: The marketplaces to include in the search.
             excluded_urls: The URLs to exclude from the search.
         """
@@ -99,21 +104,21 @@ class FraudCrawlerClient(Orchestrator):
                 language=language,
                 location=location,
                 deepness=deepness,
-                context=context,
+                prompts=prompts,
                 marketplaces=marketplaces,
                 excluded_urls=excluded_urls,
             )
         )
 
     def load_results(self, index: int = -1) -> pd.DataFrame:
-        """Loads the results from the saved .csv files.
+        """Loads the results from the saved .excel files.
         
         Args:
             index: The index of the results to load (`incex=-1` are the results for the most recent run).
         """
 
         results = self._results[index]
-        return pd.read_csv(results.filename)
+        return pd.read_excel(results.filename)
     
     def print_available_results(self) -> None:
         """Prints the available results."""

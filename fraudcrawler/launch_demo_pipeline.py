@@ -1,4 +1,5 @@
 from fraudcrawler import FraudCrawlerClient, Language, Location, Deepness
+from fraudcrawler.settings import PROMPTS
 
 _N_HEAD = 10
 
@@ -7,28 +8,28 @@ def main():
     client = FraudCrawlerClient()
 
     # Setup the search
-    search_term = "sildenafil"
+    search_term = "Kühlschrank"
     language = Language(name="German")
     location = Location(name="Switzerland")
-    deepness = Deepness(num_results=50)
-    context = "This organization is interested in medical products and drugs."
+    deepness = Deepness(num_results=200)
 
-    # # Optional: Add tern ENRICHEMENT
-    # from fraudcrawler import Enrichment
-    # deepness.enrichment = Enrichment(
-    #     additional_terms=5,
-    #     additional_urls_per_term=10
-    # )
+    # Optional: Add tern ENRICHEMENT
+    from fraudcrawler import Enrichment
+    deepness.enrichment = Enrichment(
+        additional_terms=10,
+        additional_urls_per_term=20
+    )
 
     # # Optional: Add MARKETPLACES and EXCLUDED_URLS
-    # from fraudcrawler import Host
+    from fraudcrawler import Host
     # marketplaces = [
     #     Host(name="International", domains="zavamed.com,apomeds.com"),
     #     Host(name="National", domains="netdoktor.ch, nobelpharma.ch")
     # ]
-    # excluded_urls = [
-    #     Host(name="Compendium", domains="compendium.ch")
-    # ]
+    excluded_urls = [
+        Host(name="Digitec", domains="digitec.ch"),
+        Host(name="Brack", domains="brack.ch")
+    ]
 
     # Execute the pipeline
     client.execute(
@@ -36,9 +37,9 @@ def main():
         language=language,
         location=location,
         deepness=deepness,
-        context=context,
+        prompts=PROMPTS,
         # marketplaces=marketplaces,
-        # excluded_urls=excluded_urls,
+        excluded_urls=excluded_urls,
     )
 
     # Show results
@@ -53,8 +54,6 @@ def main():
     print("=" * len(title))
     df = client.load_results()
     print(f"Number of products found: {len(df)}")
-    print(f'Number of relevant products: {len(df[df["is_relevant"] == 1])}')
-    print(f'Number of products in marketplaces: {len(df[df["is_product"] == 1])}')
     print()
     print(f"First {_N_HEAD} products are:")
     print(df.head(n=_N_HEAD))
