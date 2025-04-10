@@ -8,7 +8,7 @@ def main():
     client = FraudCrawlerClient()
 
     # Setup the search
-    search_term = "Kühlschrank"
+    search_term = "Mikrowelle"
     language = Language(name="German")
     location = Location(name="Switzerland")
     deepness = Deepness(num_results=200)

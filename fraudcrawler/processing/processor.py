@@ -45,8 +45,8 @@ class Processor:
         self,
         prompt: dict,
         url: str,
-        name: str,
-        description: str
+        name: str | None,
+        description: str | None
     ) -> int:
         """
         A generic classification method that:
@@ -99,7 +99,7 @@ class Processor:
 
             # Enforce that the classification is in the allowed classes
             allowed = prompt.get("allowed_classes")
-            if classification_str not in allowed:
+            if allowed is None or classification_str not in allowed:
                 raise ValueError(f"Unexpected classification: {classification_str}")
 
             classification = int(classification_str)
