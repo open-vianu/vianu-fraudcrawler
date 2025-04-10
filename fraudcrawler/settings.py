@@ -39,7 +39,6 @@ PROMPTS = [
             "and product details provided. Only respond with the number 1 or 0."
         ),
         "user_prompt": "Context: {context}\n\nProduct Details: {name}\n{description}\n\nRelevant?:",
-        "user_prompt_template": "{context}, {name}, {description}",
         "allowed_classes": ["0", "1"],
     },
     {
@@ -51,7 +50,6 @@ PROMPTS = [
             "provided. Respond only with the number 1 or 0."
         ),
         "user_prompt": "Context: {context}\n\nProduct Details: {name}\n{description}\n\nSerious (not junk)?:",
-        "user_prompt_template": "{context}, {name}, {description}",
         "allowed_classes": ["0", "1"],
     },
     {
@@ -63,7 +61,6 @@ PROMPTS = [
             "classify whether the product requires an energy label (1) or does not (0). Respond only with the number 1 or 0."
         ),
         "user_prompt": "Context: {context}\n\nProduct Details: {name}\n{description}\n\nRequires an energy label?:",
-        "user_prompt_template": "{context}, {name}, {description}",
         "allowed_classes": ["0", "1"],
     },
     {
@@ -75,7 +72,6 @@ PROMPTS = [
             "Respond only with the number 1 or 0."
         ),
         "user_prompt": "Context: {context}\n\nProduct Details: {name}\n{description}\n\nEnergy label mentioned?:",
-        "user_prompt_template": "{context}, {name}, {description}",
         "allowed_classes": ["0", "1"],
     },
     {
@@ -90,7 +86,6 @@ PROMPTS = [
         "user_prompt": (
             "Context: {context}\n\nProduct Details: {name}\n{description}\\n\nIs this label allowed?:"
         ),
-        "user_prompt_template": "{context}, {name}, {description}",
         "allowed_classes": ["0", "1"],
     },
 ]
