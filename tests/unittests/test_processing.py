@@ -17,6 +17,8 @@ async def test_processor_classify_product(processor):
     context = "We are interested in medical products"
     name = "sildenafil"
     description = "buy sildenafil online"
-    is_relevant = await processor.classify_product(context=context, name=name, description=description)
+    is_relevant = await processor.classify_product(
+        context=context, name=name, description=description
+    )
     assert isinstance(is_relevant, int)
     assert is_relevant in [0, 1]

@@ -60,11 +60,11 @@ class SerpApi(AsyncClient):
         if hostname is None:
             logger.warning(f'Failed to extract domain from url="{url}"')
             return None
-        
+
         # Remove www. prefix
         if hostname and hostname.startswith("www."):
             hostname = hostname[4:]
-        return hostname 
+        return hostname
 
     async def _search(
         self,
@@ -80,7 +80,7 @@ class SerpApi(AsyncClient):
             language: The language to use for the query ('hl' parameter).
             location: The location to use for the query ('gl' parameter).
             num_results: Max number of results to return.
-        
+
         The SerpAPI parameters are:
             engine: The search engine to use ('google' NOT 'google_shopping').
             q: The search string (with potentially added site: parameters).

@@ -1,9 +1,9 @@
 import logging
 
 from openai import AsyncOpenAI
-from fraudcrawler.settings import PROCESSOR_DEFAULT_MISSING_FIELDS_RELEVANCE, PROCESSOR_DEFAULT_MISSING_FIELDS_PRODUCT
 
 logger = logging.getLogger(__name__)
+
 
 class Processor:
     """
@@ -34,7 +34,7 @@ class Processor:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            **kwargs
+            **kwargs,
         )
         content = response.choices[0].message.content
         if not content:
@@ -42,11 +42,7 @@ class Processor:
         return content
 
     async def classify(
-        self,
-        prompt: dict,
-        url: str,
-        name: str | None,
-        description: str | None
+        self, prompt: dict, url: str, name: str | None, description: str | None
     ) -> int:
         """
         A generic classification method that:
@@ -85,7 +81,7 @@ class Processor:
             context=prompt["context"] or "",
             url=url or "",
             name=name or "",
-            description=description or ""
+            description=description or "",
         )
 
         # Call the OpenAI API
@@ -109,5 +105,7 @@ class Processor:
             return classification
 
         except Exception as e:
-            logger.error(f"Error classifying product '{name}' with prompt '{prompt['prompt_name']}': {e}")
+            logger.error(
+                f"Error classifying product '{name}' with prompt '{prompt['prompt_name']}': {e}"
+            )
             return -1

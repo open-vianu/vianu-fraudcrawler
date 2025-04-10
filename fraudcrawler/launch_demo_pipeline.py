@@ -3,6 +3,7 @@ from fraudcrawler.settings import PROMPTS
 
 _N_HEAD = 10
 
+
 def main():
     # Setup the client
     client = FraudCrawlerClient()
@@ -15,20 +16,19 @@ def main():
 
     # Optional: Add tern ENRICHEMENT
     from fraudcrawler import Enrichment
-    deepness.enrichment = Enrichment(
-        additional_terms=10,
-        additional_urls_per_term=20
-    )
+
+    deepness.enrichment = Enrichment(additional_terms=10, additional_urls_per_term=20)
 
     # # Optional: Add MARKETPLACES and EXCLUDED_URLS
     from fraudcrawler import Host
+
     # marketplaces = [
     #     Host(name="International", domains="zavamed.com,apomeds.com"),
     #     Host(name="National", domains="netdoktor.ch, nobelpharma.ch")
     # ]
     excluded_urls = [
         Host(name="Digitec", domains="digitec.ch"),
-        Host(name="Brack", domains="brack.ch")
+        Host(name="Brack", domains="brack.ch"),
     ]
 
     # Execute the pipeline

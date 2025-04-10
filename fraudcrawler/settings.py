@@ -40,7 +40,7 @@ PROMPTS = [
         ),
         "user_prompt": "Context: {context}\n\nProduct Details: {name}\n{description}\n\nRelevant?:",
         "user_prompt_template": "{context}, {name}, {description}",
-        "allowed_classes": ["0","1"]
+        "allowed_classes": ["0", "1"],
     },
     {
         "prompt_name": "seriousness_classification",
@@ -52,7 +52,7 @@ PROMPTS = [
         ),
         "user_prompt": "Context: {context}\n\nProduct Details: {name}\n{description}\n\nSerious (not junk)?:",
         "user_prompt_template": "{context}, {name}, {description}",
-        "allowed_classes": ["0","1"]
+        "allowed_classes": ["0", "1"],
     },
     {
         "prompt_name": "energy_label_requirement_classification",
@@ -64,7 +64,7 @@ PROMPTS = [
         ),
         "user_prompt": "Context: {context}\n\nProduct Details: {name}\n{description}\n\nRequires an energy label?:",
         "user_prompt_template": "{context}, {name}, {description}",
-        "allowed_classes": ["0","1"]
+        "allowed_classes": ["0", "1"],
     },
     {
         "prompt_name": "energy_label_mention_classification",
@@ -76,7 +76,7 @@ PROMPTS = [
         ),
         "user_prompt": "Context: {context}\n\nProduct Details: {name}\n{description}\n\nEnergy label mentioned?:",
         "user_prompt_template": "{context}, {name}, {description}",
-        "allowed_classes": ["0","1"]
+        "allowed_classes": ["0", "1"],
     },
     {
         "prompt_name": "allowed_label_classification",
@@ -91,6 +91,6 @@ PROMPTS = [
             "Context: {context}\n\nProduct Details: {name}\n{description}\\n\nIs this label allowed?:"
         ),
         "user_prompt_template": "{context}, {name}, {description}",
-        "allowed_classes": ["0","1"]
-    }
+        "allowed_classes": ["0", "1"],
+    },
 ]

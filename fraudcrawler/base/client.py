@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 _RESULTS_DIR = ROOT_DIR / "data" / "results"
 
+
 class Results(BaseModel):
     """The results of the product search."""
 
@@ -22,9 +23,9 @@ class Results(BaseModel):
     filename: Path | None = None
 
 
-class FraudCrawlerClient(Orchestrator): 
+class FraudCrawlerClient(Orchestrator):
     """The main client for FraudCrawler."""
-    
+
     _filename_template = "{search_term}_{language}_{location}_{timestamp}.xlsx"
 
     def __init__(self):
@@ -42,7 +43,9 @@ class FraudCrawlerClient(Orchestrator):
             self._results_dir.mkdir(parents=True)
         self._results: List[Results] = []
 
-    async def _collect_results(self, queue_in: asyncio.Queue[ProductItem | None]) -> None:
+    async def _collect_results(
+        self, queue_in: asyncio.Queue[ProductItem | None]
+    ) -> None:
         """Collects the results from the given queue_in and saves it as excel.
 
         Args:
@@ -60,9 +63,11 @@ class FraudCrawlerClient(Orchestrator):
 
         df = pd.DataFrame(products)
 
-        #Expand the classification column into seperated columns
-        classification_df = df['classifications'].apply(pd.Series)
-        df = pd.concat([df.drop(columns=['classifications']), classification_df], axis=1)
+        # Expand the classification column into seperated columns
+        classification_df = df["classifications"].apply(pd.Series)
+        df = pd.concat(
+            [df.drop(columns=["classifications"]), classification_df], axis=1
+        )
 
         filename = self._results[-1].filename
         df.to_excel(filename)
@@ -77,7 +82,7 @@ class FraudCrawlerClient(Orchestrator):
         prompts: List[dict],
         marketplaces: List[Host] | None = None,
         excluded_urls: List[Host] | None = None,
-    ) -> None:                                      
+    ) -> None:
         """Runs the pipeline steps: serp, enrich, zyte, process, and collect the results.
 
         Args:
@@ -112,16 +117,16 @@ class FraudCrawlerClient(Orchestrator):
 
     def load_results(self, index: int = -1) -> pd.DataFrame:
         """Loads the results from the saved .excel files.
-        
+
         Args:
             index: The index of the results to load (`incex=-1` are the results for the most recent run).
         """
 
         results = self._results[index]
         return pd.read_excel(results.filename)
-    
+
     def print_available_results(self) -> None:
         """Prints the available results."""
         n_res = len(self._results)
         for i, res in enumerate(self._results):
-            print(f"index={-n_res+i}: {res.search_term} - {res.filename}")
+            print(f"index={-n_res + i}: {res.search_term} - {res.filename}")

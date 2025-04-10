@@ -5,7 +5,11 @@ from pydantic import BaseModel
 from typing import Dict, List, Set, cast
 
 from fraudcrawler.settings import PROCESSOR_DEFAULT_MODEL, MAX_RETRIES, RETRY_DELAY
-from fraudcrawler.settings import DEFAULT_N_SERP_WKRS, DEFAULT_N_ZYTE_WKRS, DEFAULT_N_PROC_WKRS
+from fraudcrawler.settings import (
+    DEFAULT_N_SERP_WKRS,
+    DEFAULT_N_ZYTE_WKRS,
+    DEFAULT_N_PROC_WKRS,
+)
 from fraudcrawler.base.base import Deepness, Host, Language, Location
 from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
 
@@ -172,11 +176,21 @@ class Orchestrator(ABC):
             try:
                 details = await self._zyteapi.get_details(url=product.url)
                 if self._zyteapi.keep_product(details=details):
-                    product.product_name = self._zyteapi.extract_product_name(details=details)
-                    product.product_price = self._zyteapi.extract_product_price(details=details) 
-                    product.product_description = self._zyteapi.extract_product_description(details=details)
-                    product.product_images = self._zyteapi.extract_image_urls(details=details)
-                    product.probability = self._zyteapi.extract_probability(details=details)
+                    product.product_name = self._zyteapi.extract_product_name(
+                        details=details
+                    )
+                    product.product_price = self._zyteapi.extract_product_price(
+                        details=details
+                    )
+                    product.product_description = (
+                        self._zyteapi.extract_product_description(details=details)
+                    )
+                    product.product_images = self._zyteapi.extract_image_urls(
+                        details=details
+                    )
+                    product.probability = self._zyteapi.extract_probability(
+                        details=details
+                    )
                     await queue_out.put(product)
                 else:
                     logger.debug(
@@ -190,7 +204,7 @@ class Orchestrator(ABC):
         self,
         queue_in: asyncio.Queue[ProductItem | None],
         queue_out: asyncio.Queue[ProductItem | None],
-        prompts: List[dict]
+        prompts: List[dict],
     ) -> None:
         """Collects the product details from the queue_in, processes them (filtering, relevance, etc.) and puts the results into queue_out.
 
@@ -222,13 +236,19 @@ class Orchestrator(ABC):
                         name=name,
                         description=description,
                     )
-                    product.classifications[prompt_def["prompt_name"]] = classification_result
-                
+                    product.classifications[prompt_def["prompt_name"]] = (
+                        classification_result
+                    )
+
                 # Set "relevance (AND)" to 1 only if all original classifications are 1
                 product.classifications["relevance (AND)"] = int(
-                    all(value == 1 for key, value in product.classifications.items() if not key.startswith("relevance (AND"))
+                    all(
+                        value == 1
+                        for key, value in product.classifications.items()
+                        if not key.startswith("relevance (AND")
+                    )
                 )
-                
+
                 # Finally put the product in output queue
                 await queue_out.put(product)
 
@@ -238,7 +258,9 @@ class Orchestrator(ABC):
             queue_in.task_done()
 
     @abstractmethod
-    async def _collect_results(self, queue_in: asyncio.Queue[ProductItem | None]) -> None:
+    async def _collect_results(
+        self, queue_in: asyncio.Queue[ProductItem | None]
+    ) -> None:
         """Collects the results from the given queue_in.
 
         Args:
@@ -375,7 +397,7 @@ class Orchestrator(ABC):
             search_term=search_term,
             search_term_type="initial",
             num_results=deepness.num_results,
-            **common_kwargs,        # type: ignore[arg-type]
+            **common_kwargs,  # type: ignore[arg-type]
         )
 
         # Enrich the search_terms
@@ -396,7 +418,7 @@ class Orchestrator(ABC):
                     search_term=trm,
                     search_term_type="enriched",
                     num_results=enrichment.additional_urls_per_term,
-                    **common_kwargs,        # type: ignore[arg-type]
+                    **common_kwargs,  # type: ignore[arg-type]
                 )
 
     async def run(
@@ -447,9 +469,15 @@ class Orchestrator(ABC):
                 "Async framework is not setup. Please call _setup_async_framework() first."
             )
         if not all([k in self._queues for k in ["serp", "url", "zyte", "proc", "res"]]):
-            raise ValueError("The queues of the async framework are not setup correctly.")
-        if not all([k in self._workers for k in ["serp", "url", "zyte", "proc", "res"]]):
-            raise ValueError("The workers of the async framework are not setup correctly.")
+            raise ValueError(
+                "The queues of the async framework are not setup correctly."
+            )
+        if not all(
+            [k in self._workers for k in ["serp", "url", "zyte", "proc", "res"]]
+        ):
+            raise ValueError(
+                "The workers of the async framework are not setup correctly."
+            )
 
         # Add the search terms to the serp_queue
         serp_queue = self._queues["serp"]
