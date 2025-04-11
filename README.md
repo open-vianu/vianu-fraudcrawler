@@ -31,12 +31,22 @@ from fraudcrawler import FraudCrawlerClient
 client = FraudCrawlerClient()
 ```
 
-For setting up the search we need 5 main objects
-- `search_term`: The search term for the query.
-- `language`: The Language used in SerpAPI ('hl') and for related search terms (within optional enrichement)
-- `location`: The SerpAPI location ('gl') used for the query.
-- `deepness`: Defines the search depth.
-- `prompts`: The list of prompts to classify a given product
+For setting up the search we need 5 main objects.
+
+#### `search_term: str`
+The search term for the query (similar to search terms used within major search providers).
+
+#### `language: Language`
+The language used in SerpAPI ('hl' parameter), as well as for the optional search term enrichement (e.g. finding similar and related search terms). `language=Language('German')` creates an object having a language name and a language code as: `Language(name='German', code='de')`.
+
+#### `location: Location`
+The location used in SerpAPI ('gl' parameter). `location=Location('Switzerland')` creates an object having a location name and a location code as `Location(name='Switzerland', code='ch')`.
+
+#### `deepness: Deepness`
+Defines the search depth with the number of results to retrieve and optional enrichment parameters.
+
+#### `prompts: List[Prompt]`
+The list of prompts to classify a given product with (multiple) LLM calls. Each prompt object has a `name`, a `context` (used for defining the user prompt), a `system_prompt` (for defining the classification task), `allowed_classes` (a list of possible classes) and optionally `default_if_missing` (a default class if anything goes wrong).
 
 ```python
 from fraudcrawler import Language, Location, Deepness, Prompt

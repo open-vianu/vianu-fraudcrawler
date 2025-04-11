@@ -1,10 +1,4 @@
-import logging
-
-from fraudcrawler.settings import LOG_FMT, LOG_LVL
 from fraudcrawler.base.base import Setup, Host, Location, Language
-
-logging.basicConfig(level=LOG_LVL.upper(), format=LOG_FMT)
-logger = logging.getLogger(__name__)
 
 
 def test_setup():
