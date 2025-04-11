@@ -183,14 +183,16 @@ class Orchestrator(ABC):
 
             if not product.filtered:
                 try:
+                    # Fetch the product details from Zyte API
                     details = await self._zyteapi.get_details(url=product.url)
-                    if self._zyteapi.keep_product(details=details):
-                        product.product_name = self._zyteapi.extract_product_name(details=details)
-                        product.product_price = self._zyteapi.extract_product_price(details=details) 
-                        product.product_description = self._zyteapi.extract_product_description(details=details)
-                        product.product_images = self._zyteapi.extract_image_urls(details=details)
-                        product.probability = self._zyteapi.extract_probability(details=details)
-                    else:
+                    product.product_name = self._zyteapi.extract_product_name(details=details)
+                    product.product_price = self._zyteapi.extract_product_price(details=details) 
+                    product.product_description = self._zyteapi.extract_product_description(details=details)
+                    product.product_images = self._zyteapi.extract_image_urls(details=details)
+                    product.probability = self._zyteapi.extract_probability(details=details)
+
+                    # Filter the product based on the probability threshold
+                    if not self._zyteapi.keep_product(details=details):
                         product.filtered = True
                         product.filtered_at_stage = "Zyte probability threshold"
 
