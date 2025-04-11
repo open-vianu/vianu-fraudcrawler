@@ -2,7 +2,7 @@ import logging
 
 from openai import AsyncOpenAI
 
-from fraudcrawler import Prompt
+from fraudcrawler.base.base import Prompt
 from fraudcrawler.settings import PROCESSOR_USER_PROMPT_TEMPLATE
 
 

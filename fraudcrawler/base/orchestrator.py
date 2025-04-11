@@ -249,15 +249,15 @@ class Orchestrator(ABC):
                     description = product.product_description
 
                     # Run all the configured prompts
-                    for prompt_def in prompts:
-                        classification_result = await self._processor.classify(
-                            prompt=prompt_def,
+                    for prompt in prompts:
+                        classification = await self._processor.classify(
+                            prompt=prompt,
                             url=url,
                             name=name,
                             description=description,
                         )
-                        product.classifications[prompt_def["prompt_name"]] = (
-                            classification_result
+                        product.classifications[prompt.name] = (
+                            classification
                         )
                 except Exception as e:
                     logger.warning(f"Error processing product: {e}.")

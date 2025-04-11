@@ -1,4 +1,5 @@
 import asyncio
+import csv
 from datetime import datetime
 import logging
 from pathlib import Path
@@ -61,16 +62,17 @@ class FraudCrawlerClient(Orchestrator):
             products.append(product.model_dump())
             queue_in.task_done()
 
-        df = pd.DataFrame(products)
+        # Convert the list of products to a DataFrame
+        df = pd.json_normalize(products)
+        cols = [c.split(".")[-1] for c in df.columns]
+        if len(cols) != len(set(cols)):
+            logger.error("Duplicate columns after json_normalize.")
+        else:
+            df.columns = cols
 
-        # Expand the classification column into seperated columns
-        classification_df = df["classifications"].apply(pd.Series)
-        df = pd.concat(
-            [df.drop(columns=["classifications"]), classification_df], axis=1
-        )
-
+        # Save the DataFrame to a CSV file
         filename = self._results[-1].filename
-        df.to_csv(filename, index=False)
+        df.to_csv(filename, index=False, quoting=csv.QUOTE_ALL)
         logger.info(f"Results saved to {filename}")
 
     def execute(
