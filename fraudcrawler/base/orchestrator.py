@@ -5,7 +5,11 @@ from pydantic import BaseModel
 from typing import Dict, List, Set, cast
 
 from fraudcrawler.settings import PROCESSOR_DEFAULT_MODEL, MAX_RETRIES, RETRY_DELAY
-from fraudcrawler.settings import DEFAULT_N_SERP_WKRS, DEFAULT_N_ZYTE_WKRS, DEFAULT_N_PROC_WKRS
+from fraudcrawler.settings import (
+    DEFAULT_N_SERP_WKRS,
+    DEFAULT_N_ZYTE_WKRS,
+    DEFAULT_N_PROC_WKRS,
+)
 from fraudcrawler.base.base import Deepness, Host, Language, Location
 from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
 
@@ -30,6 +34,10 @@ class ProductItem(BaseModel):
 
     # Processor parameters
     is_relevant: int | None = None
+
+    # Filtering parameters
+    filtered: bool = False
+    filtered_at_stage: str | None = None
 
 
 class Orchestrator(ABC):
@@ -123,6 +131,8 @@ class Orchestrator(ABC):
                         search_term_type=search_term_type,
                         url=res.url,
                         marketplace_name=res.marketplace_name,
+                        filtered=res.filtered,
+                        filtered_at_stage=res.filtered_at_stage,
                     )
                     await queue_out.put(product)
             except Exception as e:
@@ -146,10 +156,16 @@ class Orchestrator(ABC):
                 queue_in.task_done()
                 break
 
-            url = product.url
-            if url not in self._collected_urls:
-                self._collected_urls.add(url)
-                await queue_out.put(product)
+            if not product.filtered:
+                # deduplicated
+                url = product.url
+                if url not in self._collected_urls:
+                    self._collected_urls.add(url)
+                else:
+                    product.filtered = True
+                    product.filtered_at_stage = "URL collector deduplication"
+
+            await queue_out.put(product)
             queue_in.task_done()
 
     async def _zyte_execute(
@@ -169,28 +185,42 @@ class Orchestrator(ABC):
                 queue_in.task_done()
                 break
 
-            try:
-                details = await self._zyteapi.get_details(url=product.url)
-                if self._zyteapi.keep_product(details=details):
-                    product.product_name = self._zyteapi.extract_product_name(details=details)
-                    product.product_price = self._zyteapi.extract_product_price(details=details) 
-                    product.product_description = self._zyteapi.extract_product_description(details=details)
-                    product.product_images = self._zyteapi.extract_image_urls(details=details)
-                    product.probability = self._zyteapi.extract_probability(details=details)
-                    await queue_out.put(product)
-                else:
-                    logger.debug(
-                        f'Product="{product}" does not meet probability threshold.'
+            if not product.filtered:
+                try:
+                    # Fetch the product details from Zyte API
+                    details = await self._zyteapi.get_details(url=product.url)
+                    product.product_name = self._zyteapi.extract_product_name(
+                        details=details
                     )
-            except Exception as e:
-                logger.warning(f"Error executing Zyte API search: {e}.")
+                    product.product_price = self._zyteapi.extract_product_price(
+                        details=details
+                    )
+                    product.product_description = (
+                        self._zyteapi.extract_product_description(details=details)
+                    )
+                    product.product_images = self._zyteapi.extract_image_urls(
+                        details=details
+                    )
+                    product.probability = self._zyteapi.extract_probability(
+                        details=details
+                    )
+
+                    # Filter the product based on the probability threshold
+                    if not self._zyteapi.keep_product(details=details):
+                        product.filtered = True
+                        product.filtered_at_stage = "Zyte probability threshold"
+
+                except Exception as e:
+                    logger.warning(f"Error executing Zyte API search: {e}.")
+
+            await queue_out.put(product)
             queue_in.task_done()
 
     async def _proc_execute(
         self,
         queue_in: asyncio.Queue[ProductItem | None],
         queue_out: asyncio.Queue[ProductItem | None],
-        context: str
+        context: str,
     ) -> None:
         """Collects the product details from the queue_in, processes them (filtering, relevance, etc.) and puts the results into queue_out.
 
@@ -207,19 +237,23 @@ class Orchestrator(ABC):
                 queue_in.task_done()
                 break
 
-            try:
-                name = product.product_name
-                description = product.product_description
-                product.is_relevant = await self._processor.classify_product(
-                    context=context, name=name, description=description
-                )
-                await queue_out.put(product)
-            except Exception as e:
-                logger.warning(f"Error processing product: {e}.")
+            if not product.filtered:
+                try:
+                    name = product.product_name
+                    description = product.product_description
+                    product.is_relevant = await self._processor.classify_product(
+                        context=context, name=name, description=description
+                    )
+                except Exception as e:
+                    logger.warning(f"Error processing product: {e}.")
+
+            await queue_out.put(product)
             queue_in.task_done()
 
     @abstractmethod
-    async def _collect_results(self, queue_in: asyncio.Queue[ProductItem | None]) -> None:
+    async def _collect_results(
+        self, queue_in: asyncio.Queue[ProductItem | None]
+    ) -> None:
         """Collects the results from the given queue_in.
 
         Args:
@@ -356,7 +390,7 @@ class Orchestrator(ABC):
             search_term=search_term,
             search_term_type="initial",
             num_results=deepness.num_results,
-            **common_kwargs,        # type: ignore[arg-type]
+            **common_kwargs,  # type: ignore[arg-type]
         )
 
         # Enrich the search_terms
@@ -377,7 +411,7 @@ class Orchestrator(ABC):
                     search_term=trm,
                     search_term_type="enriched",
                     num_results=enrichment.additional_urls_per_term,
-                    **common_kwargs,        # type: ignore[arg-type]
+                    **common_kwargs,  # type: ignore[arg-type]
                 )
 
     async def run(
@@ -428,9 +462,15 @@ class Orchestrator(ABC):
                 "Async framework is not setup. Please call _setup_async_framework() first."
             )
         if not all([k in self._queues for k in ["serp", "url", "zyte", "proc", "res"]]):
-            raise ValueError("The queues of the async framework are not setup correctly.")
-        if not all([k in self._workers for k in ["serp", "url", "zyte", "proc", "res"]]):
-            raise ValueError("The workers of the async framework are not setup correctly.")
+            raise ValueError(
+                "The queues of the async framework are not setup correctly."
+            )
+        if not all(
+            [k in self._workers for k in ["serp", "url", "zyte", "proc", "res"]]
+        ):
+            raise ValueError(
+                "The workers of the async framework are not setup correctly."
+            )
 
         # Add the search terms to the serp_queue
         serp_queue = self._queues["serp"]

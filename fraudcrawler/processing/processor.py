@@ -91,7 +91,7 @@ class Processor:
         # If name or description is missing, return default relevance
         if name is None or description is None:
             return PROCESSOR_DEFAULT_MISSING_FIELDS_RELEVANCE
-        
+
         # Otherwise, classify the product based on the given context
         return await self._is_relevant(
             context=context, name=name, description=description

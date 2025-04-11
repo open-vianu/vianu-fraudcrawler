@@ -52,7 +52,7 @@ class Location(BaseModel):
     """Model for location details (e.g. `Location(name="Switzerland", code="ch")`)."""
 
     name: str
-    code: str = ''
+    code: str = ""
 
     @model_validator(mode="before")
     def set_code(cls, values):
@@ -71,7 +71,7 @@ class Language(BaseModel):
     """Model for language details (e.g. `Language(name="German", code="de")`)."""
 
     name: str
-    code: str = ''
+    code: str = ""
 
     @model_validator(mode="before")
     def set_code(cls, values):

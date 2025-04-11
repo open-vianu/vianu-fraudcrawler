@@ -16,6 +16,8 @@ class SerpResult(BaseModel):
     url: str
     domain: str | None
     marketplace_name: str
+    filtered: bool = False
+    filtered_at_stage: str | None = None
 
 
 class SerpApi(AsyncClient):
@@ -60,11 +62,11 @@ class SerpApi(AsyncClient):
         if hostname is None:
             logger.warning(f'Failed to extract domain from url="{url}"')
             return None
-        
+
         # Remove www. prefix
         if hostname and hostname.startswith("www."):
             hostname = hostname[4:]
-        return hostname 
+        return hostname
 
     async def _search(
         self,
@@ -80,7 +82,7 @@ class SerpApi(AsyncClient):
             language: The language to use for the query ('hl' parameter).
             location: The location to use for the query ('gl' parameter).
             num_results: Max number of results to return.
-        
+
         The SerpAPI parameters are:
             engine: The search engine to use ('google' NOT 'google_shopping').
             q: The search string (with potentially added site: parameters).
@@ -144,7 +146,10 @@ class SerpApi(AsyncClient):
         return f".{country_code}" in url.lower() or ".com" in url.lower()
 
     def _create_serp_result(
-        self, url: str, marketplaces: List[Host] | None
+        self,
+        url: str,
+        location: Location,
+        marketplaces: List[Host] | None,
     ) -> SerpResult:
         """From a given url it creates the class:`SerpResult` instance.
 
@@ -152,9 +157,15 @@ class SerpApi(AsyncClient):
 
         Args:
             url: The URL to be processed.
+            location:  The location to use for the query.
             marketplaces: The list of marketplaces to compare the URL against.
         """
-        domain = self._get_domain(url)
+        # Filter for county code
+        filtered = not self._keep_url(url=url, country_code=location.code)
+        filtered_at_stage = "country code filtering" if filtered else None
+
+        # Get marketplace name
+        domain = self._get_domain(url=url)
         marketplace_name = self._default_marketplace_name
         if domain and marketplaces:
             try:
@@ -163,7 +174,13 @@ class SerpApi(AsyncClient):
                 )
             except StopIteration:
                 logger.warning(f'Failed to find marketplace for domain="{domain}".')
-        return SerpResult(url=url, domain=domain, marketplace_name=marketplace_name)
+        return SerpResult(
+            url=url,
+            domain=domain,
+            marketplace_name=marketplace_name,
+            filtered=filtered,
+            filtered_at_stage=filtered_at_stage,
+        )
 
     async def apply(
         self,
@@ -201,11 +218,13 @@ class SerpApi(AsyncClient):
             num_results=num_results,
         )
 
-        # Filter out the URLs not matching the country code
-        urls = [url for url in urls if self._keep_url(url, location.code)]
-
         # Form the SerpResult objects
-        results = [self._create_serp_result(url, marketplaces) for url in urls]
+        results = [
+            self._create_serp_result(
+                url=url, location=location, marketplaces=marketplaces
+            )
+            for url in urls
+        ]
 
         # Filter out the excluded URLs
         if excluded_urls:

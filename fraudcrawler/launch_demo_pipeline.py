@@ -2,6 +2,7 @@ from fraudcrawler import FraudCrawlerClient, Language, Location, Deepness
 
 _N_HEAD = 10
 
+
 def main():
     # Setup the client
     client = FraudCrawlerClient()
@@ -53,7 +54,7 @@ def main():
     print("=" * len(title))
     df = client.load_results()
     print(f"Number of products found: {len(df)}")
-    print(f'Number of relevant products: {len(df[df["is_relevant"] == 1])}')
+    print(f"Number of relevant products: {len(df[df['is_relevant'] == 1])}")
     print()
     print(f"First {_N_HEAD} products are:")
     print(df.head(n=_N_HEAD))
