@@ -15,8 +15,6 @@ from fraudcrawler.base.base import (
     Prompt,
 )
 
-logger = logging.getLogger('fraudcrawler')
-
 __all__ = [
     "SerpApi",
     "Enricher",
