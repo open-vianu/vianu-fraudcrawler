@@ -28,6 +28,7 @@ DEFAULT_N_SERP_WKRS = 10
 DEFAULT_N_ZYTE_WKRS = 10
 DEFAULT_N_PROC_WKRS = 10
 
+USER_PROMPT_TEMPLATE = "Context: {context}\n\nProduct Details: {name}\n{description}\\n\nIs this label allowed?:"
 
 PROMPTS = [
     {
@@ -38,7 +39,6 @@ PROMPTS = [
             "either relevant (1) or not relevant (0) to this organization, strictly based on the context "
             "and product details provided. Only respond with the number 1 or 0."
         ),
-        "user_prompt": "Context: {context}\n\nProduct Details: {name}\n{description}\n\nRelevant?:",
         "allowed_classes": ["0", "1"],
     },
     {
@@ -49,7 +49,6 @@ PROMPTS = [
             "a serious, legitimate product (1) or junk/not serious (0), based solely on the product information "
             "provided. Respond only with the number 1 or 0."
         ),
-        "user_prompt": "Context: {context}\n\nProduct Details: {name}\n{description}\n\nSerious (not junk)?:",
         "allowed_classes": ["0", "1"],
     },
     {
@@ -60,7 +59,6 @@ PROMPTS = [
             "Energieeffizienzverordnung), certain devices require an energy label. Based on the product details provided, "
             "classify whether the product requires an energy label (1) or does not (0). Respond only with the number 1 or 0."
         ),
-        "user_prompt": "Context: {context}\n\nProduct Details: {name}\n{description}\n\nRequires an energy label?:",
         "allowed_classes": ["0", "1"],
     },
     {
@@ -71,7 +69,6 @@ PROMPTS = [
             "explicitly mentions an energy label. Classify as 1 if there is a mention or 0 if there is none. "
             "Respond only with the number 1 or 0."
         ),
-        "user_prompt": "Context: {context}\n\nProduct Details: {name}\n{description}\n\nEnergy label mentioned?:",
         "allowed_classes": ["0", "1"],
     },
     {
@@ -82,9 +79,6 @@ PROMPTS = [
             "Classify as 1 if the product has a low-efficiency label (F, G, or worse). "
             "Classify as 0 if the product has an acceptable efficiency label (A, B, C, D, or E), or if no label is mentioned at all. "
             "Respond only with the number 1 or 0."
-        ),
-        "user_prompt": (
-            "Context: {context}\n\nProduct Details: {name}\n{description}\\n\nIs this label allowed?:"
         ),
         "allowed_classes": ["0", "1"],
     },

@@ -121,6 +121,7 @@ class Orchestrator(ABC):
             try:
                 search_term_type = item.pop("search_term_type")
                 results = await self._serpapi.apply(**item)
+                logger.error(f"\n\n\n\nReceiving n={len(results)} serpapi results\n\n\n\n\n")
                 for res in results:
                     product = ProductItem(
                         search_term=item["search_term"],
@@ -240,14 +241,6 @@ class Orchestrator(ABC):
                         classification_result
                     )
 
-                # Set "relevance (AND)" to 1 only if all original classifications are 1
-                product.classifications["relevance (AND)"] = int(
-                    all(
-                        value == 1
-                        for key, value in product.classifications.items()
-                        if not key.startswith("relevance (AND")
-                    )
-                )
 
                 # Finally put the product in output queue
                 await queue_out.put(product)

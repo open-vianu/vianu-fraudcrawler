@@ -1,6 +1,7 @@
 import logging
 
 from openai import AsyncOpenAI
+from fraudcrawler.settings import USER_PROMPT_TEMPLATE
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class Processor:
             return prompt.get("default_if_missing", -1)
 
         system_prompt = prompt["system_prompt"]
-        user_prompt_template = prompt["user_prompt"]
+        user_prompt_template = USER_PROMPT_TEMPLATE
 
         # Substitute placeholders in user_prompt with the relevant arguments
         user_prompt = user_prompt_template.format(
