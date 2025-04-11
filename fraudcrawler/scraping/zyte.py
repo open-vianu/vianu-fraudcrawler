@@ -4,7 +4,11 @@ from typing import List
 
 import aiohttp
 
-from fraudcrawler.settings import MAX_RETRIES, RETRY_DELAY, ZYTE_DEFALUT_PROBABILITY_THRESHOLD
+from fraudcrawler.settings import (
+    MAX_RETRIES,
+    RETRY_DELAY,
+    ZYTE_DEFALUT_PROBABILITY_THRESHOLD,
+)
 from fraudcrawler.base.base import AsyncClient
 
 logger = logging.getLogger(__name__)
@@ -111,7 +115,6 @@ class ZyteApi(AsyncClient):
             )
             return False
         return prob > threshold
-    
 
     @staticmethod
     def extract_product_name(details: dict) -> str | None:
@@ -125,7 +128,7 @@ class ZyteApi(AsyncClient):
             }
         """
         return details.get("product", {}).get("name")
-    
+
     @staticmethod
     def extract_product_price(details: dict) -> str | None:
         """Extracts the product price from the product data.
@@ -138,7 +141,7 @@ class ZyteApi(AsyncClient):
             }
         """
         return details.get("product", {}).get("price")
-    
+
     @staticmethod
     def extract_product_description(details: dict) -> str | None:
         """Extracts the product description from the product data.
@@ -171,10 +174,10 @@ class ZyteApi(AsyncClient):
             if (main_img := product.get("mainImage")) and (url := main_img.get("url")):
                 images.append(url)
             # Extract additional image URLs
-            if (urls := product.get("images")):
+            if urls := product.get("images"):
                 images.extend([img["url"] for img in urls if img.get("url")])
         return images
-    
+
     @staticmethod
     def extract_probability(details: dict) -> float:
         """Extracts the probability from the product data.
