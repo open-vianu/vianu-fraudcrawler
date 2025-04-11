@@ -10,12 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 class Processor:
-    """
-    Processes product data for classification based on a prompt configuration.
-    """
+    """Processes product data for classification based on a prompt configuration."""
 
     def __init__(self, api_key: str, model: str):
-        """
+        """Initializes the Processor.
+
         Args:
             api_key: The OpenAI API key.
             model: The OpenAI model to use.
@@ -29,9 +28,7 @@ class Processor:
         user_prompt: str,
         **kwargs,
     ) -> str:
-        """
-        Calls the OpenAI API with the given user prompt.
-        """
+        """Calls the OpenAI API with the given user prompt."""
         response = await self._client.chat.completions.create(
             model=self._model,
             messages=[
@@ -50,18 +47,18 @@ class Processor:
     ) -> int:
         """A generic classification method that classified a product based on a prompt object.
 
-                This method returns `prompt.default_if_missing` if:
-                    - 'name' or 'description' is None
-                    - an error occurs during the API call
-                    - if the response isn't in allowed_classes.
-        `
-                Args:
-                    prompt: A dictionary with keys "system_prompt", "user_prompt", etc.
-                    url: Product URL (often used in the user_prompt).
-                    name: Product name (often used in the user_prompt).
-                    description: Product description (often used in the user_prompt).
+        Args:
+            prompt: A dictionary with keys "system_prompt", "user_prompt", etc.
+            url: Product URL (often used in the user_prompt).
+            name: Product name (often used in the user_prompt).
+            description: Product description (often used in the user_prompt).
+        
+        Note:
+            This method returns `prompt.default_if_missing` if:
+                - 'name' or 'description' is None
+                - an error occurs during the API call
+                - if the response isn't in allowed_classes.
         """
-
         # If required fields are missing, return the prompt's default fallback if provided.
         if name is None or description is None:
             logger.warning(

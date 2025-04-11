@@ -36,16 +36,29 @@ For setting up the search we need 5 main objects
 - `language`: The Language used in SerpAPI ('hl') and for related search terms (within optional enrichement)
 - `location`: The SerpAPI location ('gl') used for the query.
 - `deepness`: Defines the search depth.
-- `context`: The context prompt to use for detecting relevant products
+- `prompts`: The list of prompts to classify a given product
 
 ```python
-from fraudcrawler import Language, Location, Deepness
+from fraudcrawler import Language, Location, Deepness, Prompt
 # Setup the search
 search_term = "sildenafil"
 language = Language(name="German")
 location = Location(name="Switzerland")
 deepness = Deepness(num_results=50)
-context = "This organization is interested in medical products and drugs."
+prompts = [
+    Prompt(
+        name="relevance",
+        context="This organization is interested in medical products and drugs.",
+        system_prompt=(
+            "You are a helpful and intelligent assistant. Your task is to classify any given product "
+            "as either relevant (1) or not relevant (0), strictly based on the context and product details provided by the user. "
+            "You must consider all aspects of the given context and make a binary decision accordingly. "
+            "If the product aligns with the user's needs, classify it as 1 (relevant); otherwise, classify it as 0 (not relevant). "
+            "Respond only with the number 1 or 0."
+        ),
+        allowed_classes=[0, 1],
+    )
+]
 ```
 
 (Optional) Add search term enrichement. This will find related search terms (in a given language) and search for these as well.
@@ -81,12 +94,12 @@ client.execute(
     language=language,
     location=location,
     deepness=deepness,
-    context=context,
+    prompts=prompts,
     # marketplaces=marketplaces,    # Uncomment this for using marketplaces
     # excluded_urls=excluded_urls   # Uncomment this for using excluded_urls
 )
 ```
-This creates a file with name pattern `<search_term>_<datetime[%Y%m%d%H%M%S]>.csv` inside the folder `data/results/`.
+This creates a file with name pattern `<search_term>_<language.code>_<location.code>_<datetime[%Y%m%d%H%M%S]>.csv` inside the folder `data/results/`.
 
 Once the pipeline terminated the results can be loaded and examined as follows:
 ```python

@@ -230,7 +230,7 @@ class Orchestrator(ABC):
         Args:
             queue_in: The input queue containing the product details.
             queue_out: The output queue to put the processed product details.
-            prompts: The list of prompts to use for the processing.
+            prompts: The list of prompts to use for classification. 
         """
 
         # Process the products
@@ -250,6 +250,7 @@ class Orchestrator(ABC):
 
                     # Run all the configured prompts
                     for prompt in prompts:
+                        logger.debug(f"Classify product {name} with prompt {prompt.name}")
                         classification = await self._processor.classify(
                             prompt=prompt,
                             url=url,
@@ -287,7 +288,7 @@ class Orchestrator(ABC):
             n_serp_wkrs: Number of async workers for serp.
             n_zyte_wkrs: Number of async workers for zyte.
             n_proc_wkrs: Number of async workers for processor.
-            prompts: The list of prompts used by the LLM for determining relevance (func:`Processor.classify`).
+            prompts: The list of prompts used for the classification by func:`Processor.classify`.
         """
 
         # Setup the input/output queues for the workers
@@ -444,7 +445,7 @@ class Orchestrator(ABC):
             language: The language to use for the query.
             location: The location to use for the query.
             deepness: The search depth and enrichment details.
-            prompts: The list of prompt to use for determining relevance.
+            prompts: The list of prompt to use for classification.
             marketplaces: The marketplaces to include in the search.
             excluded_urls: The URLs to exclude from the search.
         """
