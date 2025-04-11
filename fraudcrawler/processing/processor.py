@@ -52,7 +52,7 @@ class Processor:
             url: Product URL (often used in the user_prompt).
             name: Product name (often used in the user_prompt).
             description: Product description (often used in the user_prompt).
-        
+
         Note:
             This method returns `prompt.default_if_missing` if:
                 - 'name' or 'description' is None

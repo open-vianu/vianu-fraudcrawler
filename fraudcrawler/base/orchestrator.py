@@ -230,7 +230,7 @@ class Orchestrator(ABC):
         Args:
             queue_in: The input queue containing the product details.
             queue_out: The output queue to put the processed product details.
-            prompts: The list of prompts to use for classification. 
+            prompts: The list of prompts to use for classification.
         """
 
         # Process the products
@@ -250,7 +250,9 @@ class Orchestrator(ABC):
 
                     # Run all the configured prompts
                     for prompt in prompts:
-                        logger.debug(f"Classify product {name} with prompt {prompt.name}")
+                        logger.debug(
+                            f"Classify product {name} with prompt {prompt.name}"
+                        )
                         classification = await self._processor.classify(
                             prompt=prompt,
                             url=url,
