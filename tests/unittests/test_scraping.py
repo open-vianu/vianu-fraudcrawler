@@ -56,8 +56,13 @@ def test_serpapi_keep_url(serpapi):
 
 def test_serpapi_create_serp_result(serpapi):
     url = "https://www.example.ch"
+    location = Location(name="Switzerland")
     marketplaces = None
-    result = serpapi._create_serp_result(url=url, marketplaces=marketplaces)
+    result = serpapi._create_serp_result(
+        url=url,
+        location=location,
+        marketplaces=marketplaces,
+    )
     assert result.url == url
     assert result.domain == "example.ch"
     assert result.marketplace_name == serpapi._default_marketplace_name
@@ -66,13 +71,21 @@ def test_serpapi_create_serp_result(serpapi):
         Host(name="Galaxus", domains="galaxus.ch"),
         Host(name="Example", domains="example.ch"),
     ]
-    result = serpapi._create_serp_result(url=url, marketplaces=marketplaces)
+    result = serpapi._create_serp_result(
+        url=url,
+        location=location,
+        marketplaces=marketplaces,
+    )
     assert result.url == url
     assert result.domain == "example.ch"
     assert result.marketplace_name == "Example"
 
     marketplaces = [Host(name="Galaxus", domains="galaxus.ch")]
-    serp_result = serpapi._create_serp_result(url=url, marketplaces=marketplaces)
+    serp_result = serpapi._create_serp_result(
+        url=url,
+        location=location,
+        marketplaces=marketplaces,
+    )
     assert serp_result.url == url
     assert serp_result.domain == "example.ch"
     assert serp_result.marketplace_name == serpapi._default_marketplace_name

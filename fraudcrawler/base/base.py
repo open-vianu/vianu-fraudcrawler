@@ -6,7 +6,11 @@ from typing import List
 
 import aiohttp
 
-from fraudcrawler.settings import GOOGLE_LANGUAGES_FILENAME, GOOGLE_LOCATIONS_FILENAME
+from fraudcrawler.settings import (
+    GOOGLE_LANGUAGES_FILENAME,
+    GOOGLE_LOCATIONS_FILENAME,
+    PROCESSOR_DEFAULT_IF_MISSING,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +102,16 @@ class Deepness(BaseModel):
 
     num_results: int
     enrichment: Enrichment | None = None
+
+
+class Prompt(BaseModel):
+    """Model for prompts."""
+
+    name: str
+    context: str
+    system_prompt: str
+    allowed_classes: List[int]
+    default_if_missing: int = PROCESSOR_DEFAULT_IF_MISSING
 
 
 class AsyncClient:

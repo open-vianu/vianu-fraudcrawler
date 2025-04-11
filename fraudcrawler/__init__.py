@@ -7,7 +7,14 @@ from fraudcrawler.scraping.zyte import ZyteApi
 from fraudcrawler.processing.processor import Processor
 from fraudcrawler.base.orchestrator import Orchestrator, ProductItem
 from fraudcrawler.base.client import FraudCrawlerClient
-from fraudcrawler.base.base import Deepness, Enrichment, Host, Language, Location
+from fraudcrawler.base.base import (
+    Deepness,
+    Enrichment,
+    Host,
+    Language,
+    Location,
+    Prompt,
+)
 
 logging.basicConfig(level=LOG_LVL.upper(), format=LOG_FMT, datefmt=LOG_DATE_FMT)
 logger = logging.getLogger(__name__)
@@ -33,4 +40,5 @@ __all__ = [
     "Host",
     "Deepness",
     "Enrichment",
+    "Prompt",
 ]

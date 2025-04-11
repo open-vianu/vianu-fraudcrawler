@@ -2,29 +2,18 @@ import logging
 
 from openai import AsyncOpenAI
 
-from fraudcrawler.settings import PROCESSOR_DEFAULT_MISSING_FIELDS_RELEVANCE
+from fraudcrawler.base.base import Prompt
+from fraudcrawler.settings import PROCESSOR_USER_PROMPT_TEMPLATE
 
 
 logger = logging.getLogger(__name__)
 
 
 class Processor:
-    """Processes the product data for assessing its relevance."""
-
-    _system_prompt = (
-        "You are a helpful and intelligent assistant. Your task is to classify any given product "
-        "as either relevant (1) or not relevant (0), strictly based on the context and product details provided by the user. "
-        "You must consider all aspects of the given context and make a binary decision accordingly. "
-        "If the product aligns with the user's needs, classify it as 1 (relevant); otherwise, classify it as 0 (not relevant). "
-        "Respond only with the number 1 or 0."
-    )
-
-    _user_prompt_template = (
-        "Context: {context}\n\nProduct Details: {name}\n{description}\n\nRelevance:"
-    )
+    """Processes product data for classification based on a prompt configuration."""
 
     def __init__(self, api_key: str, model: str):
-        """Initializes the Processor with the given location.
+        """Initializes the Processor.
 
         Args:
             api_key: The OpenAI API key.
@@ -33,66 +22,84 @@ class Processor:
         self._client = AsyncOpenAI(api_key=api_key)
         self._model = model
 
-    async def _is_relevant(self, context: str, name: str, description: str) -> int:
-        """Classifies a single product as suspicious (1) or not suspicious (0) based on the given context.
+    async def _call_openai_api(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        **kwargs,
+    ) -> str:
+        """Calls the OpenAI API with the given user prompt."""
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            **kwargs,
+        )
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError("Empty response from OpenAI API")
+        return content
+
+    async def classify(
+        self, prompt: Prompt, url: str, name: str | None, description: str | None
+    ) -> int:
+        """A generic classification method that classified a product based on a prompt object.
 
         Args:
-            context: The context used by the LLM for determining if a product is suspicious.
-            name: The name of the product.
-            description: The description of the product.
-        """
+            prompt: A dictionary with keys "system_prompt", "user_prompt", etc.
+            url: Product URL (often used in the user_prompt).
+            name: Product name (often used in the user_prompt).
+            description: Product description (often used in the user_prompt).
 
-        # Set up user prompt
-        user_prompt = self._user_prompt_template.format(
-            context=context,
+        Note:
+            This method returns `prompt.default_if_missing` if:
+                - 'name' or 'description' is None
+                - an error occurs during the API call
+                - if the response isn't in allowed_classes.
+        """
+        # If required fields are missing, return the prompt's default fallback if provided.
+        if name is None or description is None:
+            logger.warning(
+                f"Missing required fields for classification: name='{name}', description='{description}'"
+            )
+            return prompt.default_if_missing
+
+        # Substitute placeholders in user_prompt with the relevant arguments
+        user_prompt = PROCESSOR_USER_PROMPT_TEMPLATE.format(
+            context=prompt.context,
+            url=url,
             name=name,
             description=description,
         )
 
-        # Query OpenAI API
+        # Call the OpenAI API
         try:
-            response = await self._client.chat.completions.create(
-                model=self._model,
-                messages=[
-                    {"role": "system", "content": self._system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                max_tokens=1,  # Ensuring a short response
+            logger.debug(
+                f'Calling OpenAI API for classification (name="{name}", prompt="{prompt.name}")'
             )
+            content = await self._call_openai_api(
+                system_prompt=prompt.system_prompt,
+                user_prompt=user_prompt,
+                max_tokens=1,
+            )
+            classification = int(content.strip())
 
-            # Extract and validate the response
-            content = response.choices[0].message.content
-            if not content:
-                raise ValueError("Empty response from OpenAI API")
-            classification = content.strip()
-            if classification not in ["0", "1"]:
-                raise ValueError(
-                    f"Unexpected response from OpenAI API: {classification}"
+            # Enforce that the classification is in the allowed classes
+            if classification not in prompt.allowed_classes:
+                logger.warning(
+                    f"Classification '{classification}' not in allowed classes {prompt.allowed_classes}"
                 )
+                return prompt.default_if_missing
 
-            logger.info(f'classified product "{name}" as {classification}')
-            return int(classification)
+            logger.info(
+                f'Classification for "{name}" (prompt={prompt.name}): {classification}'
+            )
+            return classification
 
         except Exception as e:
-            logger.error(f"Error classifying product: {e}")
-            return -1  # Indicate an error occurred
-
-    async def classify_product(
-        self, context: str, name: str | None, description: str | None
-    ) -> int:
-        """Adds a field 'is_relevant' to the product based on the classification.
-
-        Args:
-            context: The context used by the LLM for determining if a product is suspicious.
-            name: The name of the product.
-            description: The description of the product.
-        """
-
-        # If name or description is missing, return default relevance
-        if name is None or description is None:
-            return PROCESSOR_DEFAULT_MISSING_FIELDS_RELEVANCE
-
-        # Otherwise, classify the product based on the given context
-        return await self._is_relevant(
-            context=context, name=name, description=description
-        )
+            logger.error(
+                f'Error classifying product "{name}" with prompt "{prompt.name}": {e}'
+            )
+            return prompt.default_if_missing

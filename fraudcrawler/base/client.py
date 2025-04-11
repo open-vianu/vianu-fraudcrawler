@@ -1,4 +1,5 @@
 import asyncio
+import csv
 from datetime import datetime
 import logging
 from pathlib import Path
@@ -8,7 +9,7 @@ from typing import List
 import pandas as pd
 
 from fraudcrawler.settings import ROOT_DIR
-from fraudcrawler.base.base import Setup, Language, Location, Deepness, Host
+from fraudcrawler.base.base import Setup, Language, Location, Deepness, Host, Prompt
 from fraudcrawler.base.orchestrator import Orchestrator, ProductItem
 
 logger = logging.getLogger(__name__)
@@ -61,9 +62,17 @@ class FraudCrawlerClient(Orchestrator):
             products.append(product.model_dump())
             queue_in.task_done()
 
-        df = pd.DataFrame(products)
+        # Convert the list of products to a DataFrame
+        df = pd.json_normalize(products)
+        cols = [c.split(".")[-1] for c in df.columns]
+        if len(cols) != len(set(cols)):
+            logger.error("Duplicate columns after json_normalize.")
+        else:
+            df.columns = cols
+
+        # Save the DataFrame to a CSV file
         filename = self._results[-1].filename
-        df.to_csv(filename, index=False)
+        df.to_csv(filename, index=False, quoting=csv.QUOTE_ALL)
         logger.info(f"Results saved to {filename}")
 
     def execute(
@@ -72,7 +81,7 @@ class FraudCrawlerClient(Orchestrator):
         language: Language,
         location: Location,
         deepness: Deepness,
-        context: str,
+        prompts: List[Prompt],
         marketplaces: List[Host] | None = None,
         excluded_urls: List[Host] | None = None,
     ) -> None:
@@ -83,7 +92,7 @@ class FraudCrawlerClient(Orchestrator):
             language: The language to use for the query.
             location: The location to use for the query.
             deepness: The search depth and enrichment details.
-            context: The context prompt to use for detecting relevant products.
+            prompts: The list of prompts to use for classification.
             marketplaces: The marketplaces to include in the search.
             excluded_urls: The URLs to exclude from the search.
         """
@@ -102,7 +111,7 @@ class FraudCrawlerClient(Orchestrator):
                 language=language,
                 location=location,
                 deepness=deepness,
-                context=context,
+                prompts=prompts,
                 marketplaces=marketplaces,
                 excluded_urls=excluded_urls,
             )
