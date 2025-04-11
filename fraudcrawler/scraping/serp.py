@@ -146,7 +146,10 @@ class SerpApi(AsyncClient):
         return f".{country_code}" in url.lower() or ".com" in url.lower()
 
     def _create_serp_result(
-        self, url: str, marketplaces: List[Host] | None, location: Location
+        self,
+        url: str,
+        location: Location,
+        marketplaces: List[Host] | None,
     ) -> SerpResult:
         """From a given url it creates the class:`SerpResult` instance.
 
@@ -154,15 +157,15 @@ class SerpApi(AsyncClient):
 
         Args:
             url: The URL to be processed.
-            marketplaces: The list of marketplaces to compare the URL against.
             location:  The location to use for the query.
+            marketplaces: The list of marketplaces to compare the URL against.
         """
         # Filter for county code
-        filtered = not self._keep_url(url, location.code)
+        filtered = not self._keep_url(url=url, country_code=location.code)
         filtered_at_stage = "country code filtering" if filtered else None
 
         # Get marketplace name
-        domain = self._get_domain(url)
+        domain = self._get_domain(url=url)
         marketplace_name = self._default_marketplace_name
         if domain and marketplaces:
             try:
