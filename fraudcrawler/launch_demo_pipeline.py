@@ -1,4 +1,11 @@
+import logging
+
 from fraudcrawler import FraudCrawlerClient, Language, Location, Deepness, Prompt
+
+LOG_FMT = "%(asctime)s | %(name)s | %(funcName)s | %(levelname)s | %(message)s"
+LOG_LVL = "INFO"
+DATE_FMT = "%Y-%m-%d %H:%M:%S"
+logging.basicConfig(format=LOG_FMT, level=LOG_LVL, datefmt=DATE_FMT)
 
 
 def main():
