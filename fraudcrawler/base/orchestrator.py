@@ -125,8 +125,8 @@ class Orchestrator(ABC):
             try:
                 search_term_type = item.pop("search_term_type")
                 results = await self._serpapi.apply(**item)
-                logger.error(
-                    f"\n\n\n\nReceiving n={len(results)} serpapi results\n\n\n\n\n"
+                logger.debug(
+                    f"SERP API search for {item['search_term']} returned {len(results)} results"
                 )
                 for res in results:
                     product = ProductItem(
