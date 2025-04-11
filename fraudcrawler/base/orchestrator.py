@@ -127,6 +127,8 @@ class Orchestrator(ABC):
                         search_term_type=search_term_type,
                         url=res.url,
                         marketplace_name=res.marketplace_name,
+                        filtered=res.filtered,
+                        filtered_at_stage=res.filtered_at_stage,
                     )
                     await queue_out.put(product)
             except Exception as e:
