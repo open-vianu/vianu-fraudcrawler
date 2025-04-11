@@ -21,10 +21,11 @@ ZYTE_DEFALUT_PROBABILITY_THRESHOLD = 0.1
 # Processor settings
 PROCESSOR_DEFAULT_MODEL = "gpt-4o"
 PROCESSOR_DEFAULT_IF_MISSING = -1
-PROCESSOR_USER_PROMPT_TEMPLATE = "Context: {context}\n\nProduct Details: {name}\n{description}\\n\nRelevance:"
+PROCESSOR_USER_PROMPT_TEMPLATE = (
+    "Context: {context}\n\nProduct Details: {name}\n{description}\\n\nRelevance:"
+)
 
 # Async settings
 DEFAULT_N_SERP_WKRS = 10
 DEFAULT_N_ZYTE_WKRS = 10
 DEFAULT_N_PROC_WKRS = 10
-

@@ -256,9 +256,7 @@ class Orchestrator(ABC):
                             name=name,
                             description=description,
                         )
-                        product.classifications[prompt.name] = (
-                            classification
-                        )
+                        product.classifications[prompt.name] = classification
                 except Exception as e:
                     logger.warning(f"Error processing product: {e}.")
 

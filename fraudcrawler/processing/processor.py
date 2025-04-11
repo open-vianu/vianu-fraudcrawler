@@ -49,17 +49,17 @@ class Processor:
         self, prompt: Prompt, url: str, name: str | None, description: str | None
     ) -> int:
         """A generic classification method that classified a product based on a prompt object.
-    
-        This method returns `prompt.default_if_missing` if:
-            - 'name' or 'description' is None
-            - an error occurs during the API call
-            - if the response isn't in allowed_classes.
-`
-        Args:
-            prompt: A dictionary with keys "system_prompt", "user_prompt", etc.
-            url: Product URL (often used in the user_prompt).
-            name: Product name (often used in the user_prompt).
-            description: Product description (often used in the user_prompt).
+
+                This method returns `prompt.default_if_missing` if:
+                    - 'name' or 'description' is None
+                    - an error occurs during the API call
+                    - if the response isn't in allowed_classes.
+        `
+                Args:
+                    prompt: A dictionary with keys "system_prompt", "user_prompt", etc.
+                    url: Product URL (often used in the user_prompt).
+                    name: Product name (often used in the user_prompt).
+                    description: Product description (often used in the user_prompt).
         """
 
         # If required fields are missing, return the prompt's default fallback if provided.
@@ -79,7 +79,9 @@ class Processor:
 
         # Call the OpenAI API
         try:
-            logger.debug(f'Calling OpenAI API for classification (name="{name}", prompt="{prompt.name}")')
+            logger.debug(
+                f'Calling OpenAI API for classification (name="{name}", prompt="{prompt.name}")'
+            )
             content = await self._call_openai_api(
                 system_prompt=prompt.system_prompt,
                 user_prompt=user_prompt,
@@ -94,9 +96,13 @@ class Processor:
                 )
                 return prompt.default_if_missing
 
-            logger.info(f'Classification for "{name}" (prompt={prompt.name}): {classification}')
+            logger.info(
+                f'Classification for "{name}" (prompt={prompt.name}): {classification}'
+            )
             return classification
 
         except Exception as e:
-            logger.error(f'Error classifying product "{name}" with prompt "{prompt.name}": {e}')
+            logger.error(
+                f'Error classifying product "{name}" with prompt "{prompt.name}": {e}'
+            )
             return prompt.default_if_missing

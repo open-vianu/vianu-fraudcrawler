@@ -1,8 +1,6 @@
 from fraudcrawler import FraudCrawlerClient, Language, Location, Deepness, Prompt
 
 
-
-
 def main():
     # Setup the client
     client = FraudCrawlerClient()
