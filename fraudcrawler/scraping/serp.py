@@ -16,6 +16,8 @@ class SerpResult(BaseModel):
     url: str
     domain: str | None
     marketplace_name: str
+    filtered: bool = False
+    filtered_at_stage: str | None = None
 
 
 class SerpApi(AsyncClient):
@@ -144,7 +146,7 @@ class SerpApi(AsyncClient):
         return f".{country_code}" in url.lower() or ".com" in url.lower()
 
     def _create_serp_result(
-        self, url: str, marketplaces: List[Host] | None
+        self, url: str, marketplaces: List[Host] | None, location: Location
     ) -> SerpResult:
         """From a given url it creates the class:`SerpResult` instance.
 
@@ -153,7 +155,13 @@ class SerpApi(AsyncClient):
         Args:
             url: The URL to be processed.
             marketplaces: The list of marketplaces to compare the URL against.
+            location:  The location to use for the query.
         """
+        # Filter for county code
+        filtered = not self._keep_url(url, location.code)
+        filtered_at_stage = "country code filtering" if filtered else None
+
+        # Get marketplace name
         domain = self._get_domain(url)
         marketplace_name = self._default_marketplace_name
         if domain and marketplaces:
@@ -163,7 +171,7 @@ class SerpApi(AsyncClient):
                 )
             except StopIteration:
                 logger.warning(f'Failed to find marketplace for domain="{domain}".')
-        return SerpResult(url=url, domain=domain, marketplace_name=marketplace_name)
+        return SerpResult(url=url, domain=domain, marketplace_name=marketplace_name, filtered=filtered, filtered_at_stage=filtered_at_stage)
 
     async def apply(
         self,
@@ -201,11 +209,8 @@ class SerpApi(AsyncClient):
             num_results=num_results,
         )
 
-        # Filter out the URLs not matching the country code
-        urls = [url for url in urls if self._keep_url(url, location.code)]
-
         # Form the SerpResult objects
-        results = [self._create_serp_result(url, marketplaces) for url in urls]
+        results = [self._create_serp_result(url, marketplaces, location) for url in urls]
 
         # Filter out the excluded URLs
         if excluded_urls:

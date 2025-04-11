@@ -182,3 +182,7 @@ data/
 
 # Playground files
 playground/
+
+
+.history
+.DS_Store

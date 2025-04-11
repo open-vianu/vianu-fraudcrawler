@@ -31,6 +31,10 @@ class ProductItem(BaseModel):
     # Processor parameters
     is_relevant: int | None = None
 
+    # Filtering parameters
+    filtered: bool = False
+    filtered_at_stage: str | None = None
+
 
 class Orchestrator(ABC):
     """Abstract base class for orchestrating the different actors (crawling, processing).
@@ -145,11 +149,17 @@ class Orchestrator(ABC):
             if product is None:
                 queue_in.task_done()
                 break
+            
+            if not product.filtered:
+                # deduplicated
+                url = product.url
+                if url not in self._collected_urls:
+                    self._collected_urls.add(url)
+                else:
+                    product.filtered = True
+                    product.filtered_at_stage = "URL collector deduplication"
 
-            url = product.url
-            if url not in self._collected_urls:
-                self._collected_urls.add(url)
-                await queue_out.put(product)
+            await queue_out.put(product)
             queue_in.task_done()
 
     async def _zyte_execute(
@@ -169,22 +179,25 @@ class Orchestrator(ABC):
                 queue_in.task_done()
                 break
 
-            try:
-                details = await self._zyteapi.get_details(url=product.url)
-                if self._zyteapi.keep_product(details=details):
-                    product.product_name = self._zyteapi.extract_product_name(details=details)
-                    product.product_price = self._zyteapi.extract_product_price(details=details) 
-                    product.product_description = self._zyteapi.extract_product_description(details=details)
-                    product.product_images = self._zyteapi.extract_image_urls(details=details)
-                    product.probability = self._zyteapi.extract_probability(details=details)
-                    await queue_out.put(product)
-                else:
-                    logger.debug(
-                        f'Product="{product}" does not meet probability threshold.'
-                    )
-            except Exception as e:
-                logger.warning(f"Error executing Zyte API search: {e}.")
+            if not product.filtered:
+                try:
+                    details = await self._zyteapi.get_details(url=product.url)
+                    if self._zyteapi.keep_product(details=details):
+                        product.product_name = self._zyteapi.extract_product_name(details=details)
+                        product.product_price = self._zyteapi.extract_product_price(details=details) 
+                        product.product_description = self._zyteapi.extract_product_description(details=details)
+                        product.product_images = self._zyteapi.extract_image_urls(details=details)
+                        product.probability = self._zyteapi.extract_probability(details=details)
+                    else:
+                        product.filtered = True
+                        product.filtered_at_stage = "Zyte probability threshold"
+
+                except Exception as e:
+                    logger.warning(f"Error executing Zyte API search: {e}.")
+                
+            await queue_out.put(product)
             queue_in.task_done()
+
 
     async def _proc_execute(
         self,
@@ -206,16 +219,18 @@ class Orchestrator(ABC):
             if product is None:
                 queue_in.task_done()
                 break
+            
+            if not product.filtered:
+                try:
+                    name = product.product_name
+                    description = product.product_description
+                    product.is_relevant = await self._processor.classify_product(
+                        context=context, name=name, description=description
+                    )
+                except Exception as e:
+                    logger.warning(f"Error processing product: {e}.")
 
-            try:
-                name = product.product_name
-                description = product.product_description
-                product.is_relevant = await self._processor.classify_product(
-                    context=context, name=name, description=description
-                )
-                await queue_out.put(product)
-            except Exception as e:
-                logger.warning(f"Error processing product: {e}.")
+            await queue_out.put(product)
             queue_in.task_done()
 
     @abstractmethod
