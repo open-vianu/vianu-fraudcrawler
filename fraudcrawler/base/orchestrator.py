@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import asyncio
 import logging
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Dict, List, Set, cast
 
 from fraudcrawler.settings import PROCESSOR_DEFAULT_MODEL, MAX_RETRIES, RETRY_DELAY
@@ -10,7 +10,7 @@ from fraudcrawler.settings import (
     DEFAULT_N_ZYTE_WKRS,
     DEFAULT_N_PROC_WKRS,
 )
-from fraudcrawler.base.base import Deepness, Host, Language, Location
+from fraudcrawler.base.base import Deepness, Host, Language, Location, Prompt
 from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class ProductItem(BaseModel):
     probability: float | None = None
 
     # Processor parameters are set dynamic so we must allow extra fields
-    classifications: Dict[str, int] = {}
+    classifications: Dict[str, int] = Field(default_factory=dict)
 
     # Filtering parameters
     filtered: bool = False
@@ -223,7 +223,7 @@ class Orchestrator(ABC):
         self,
         queue_in: asyncio.Queue[ProductItem | None],
         queue_out: asyncio.Queue[ProductItem | None],
-        prompts: List[dict],
+        prompts: List[Prompt],
     ) -> None:
         """Collects the product details from the queue_in, processes them (filtering, relevance, etc.) and puts the results into queue_out.
 
@@ -281,7 +281,7 @@ class Orchestrator(ABC):
         n_serp_wkrs: int,
         n_zyte_wkrs: int,
         n_proc_wkrs: int,
-        prompts: List[dict],
+        prompts: List[Prompt],
     ) -> None:
         """Sets up the necessary queues and workers for the async framework.
 
@@ -435,7 +435,7 @@ class Orchestrator(ABC):
         language: Language,
         location: Location,
         deepness: Deepness,
-        prompts: List[dict],
+        prompts: List[Prompt],
         marketplaces: List[Host] | None = None,
         excluded_urls: List[Host] | None = None,
     ) -> None:

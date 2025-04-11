@@ -8,7 +8,7 @@ from typing import List
 import pandas as pd
 
 from fraudcrawler.settings import ROOT_DIR
-from fraudcrawler.base.base import Setup, Language, Location, Deepness, Host
+from fraudcrawler.base.base import Setup, Language, Location, Deepness, Host, Prompt
 from fraudcrawler.base.orchestrator import Orchestrator, ProductItem
 
 logger = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ class FraudCrawlerClient(Orchestrator):
         language: Language,
         location: Location,
         deepness: Deepness,
-        prompts: List[dict],
+        prompts: List[Prompt],
         marketplaces: List[Host] | None = None,
         excluded_urls: List[Host] | None = None,
     ) -> None:

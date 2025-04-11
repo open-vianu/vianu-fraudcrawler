@@ -1,43 +1,5 @@
-from fraudcrawler import FraudCrawlerClient, Language, Location, Deepness
+from fraudcrawler import FraudCrawlerClient, Language, Location, Deepness, Prompt
 
-
-PROMPTS = [
-    {
-        "prompt_name": "relevance_classification",
-        "context": "This organization is interested in checking the energy efficiency of certain devices.",
-        "system_prompt": (
-            "You are a helpful and intelligent assistant. Your task is to classify any given product "
-            "as either relevant (1) or not relevant (0), strictly based on the context and product details provided by the user. "
-            "You must consider all aspects of the given context and make a binary decision accordingly. "
-            "If the product aligns with the user's needs, classify it as 1 (relevant); otherwise, classify it as 0 (not relevant). "
-            "Respond only with the number 1 or 0."
-        ),
-        "allowed_classes": ["0", "1"],
-        "default_if_missing": -1
-    },
-    {
-        "prompt_name": "seriousness_classification",
-        "context": "This organization is interested in checking the energy efficiency of certain devices.",
-        "system_prompt": (
-            "You are an intelligent and discerning assistant. Your task is to classify each item as either "
-            "a product for sale (1) or not a product for sale (0). To make this distinction, consider the following criteria: \n"
-            "    1 Product for Sale (1): Classify as 1 if the result clearly indicates an item available for purchase, typically found  "
-            "within an online shop or marketplace.\n"
-            "    2 Not a Product for Sale (0): Classify as 0 if the result is unrelated to a direct purchase of a product. This includes items such as: \n"
-            "        - Books and Videos: These may be available for sale, but if they are about or related to the searched product rather than being the "
-            "exact product itself, classify as 0.\n"
-            "        - Advertisements: Promotional content that doesn't directly sell a product.\n"
-            "        - Companies and Services: Names and descriptions of companies or services related to the product but not the product itself.\n"
-            "        - Related Topics/Content: Any text or media that discusses or elaborates on the topic without offering a tangible product for sale.\n"
-            "Make your decision based solely on the context and details provided in the search result. Respond only with the number 1 or 0."
-        ),
-        "allowed_classes": ["0", "1"],
-        "default_if_missing": -1
-    },
-]
-
-
-_N_HEAD = 10
 
 
 
@@ -50,7 +12,38 @@ def main():
     language = Language(name="German")
     location = Location(name="Switzerland")
     deepness = Deepness(num_results=20)
-
+    prompts = [
+        Prompt(
+            name="relevance",
+            context="This organization is interested in checking the energy efficiency of certain devices.",
+            system_prompt=(
+                "You are a helpful and intelligent assistant. Your task is to classify any given product "
+                "as either relevant (1) or not relevant (0), strictly based on the context and product details provided by the user. "
+                "You must consider all aspects of the given context and make a binary decision accordingly. "
+                "If the product aligns with the user's needs, classify it as 1 (relevant); otherwise, classify it as 0 (not relevant). "
+                "Respond only with the number 1 or 0."
+            ),
+            allowed_classes=[0, 1],
+        ),
+        Prompt(
+            name="seriousness",
+            context="This organization is interested in checking the energy efficiency of certain devices.",
+            system_prompt=(
+                "You are an intelligent and discerning assistant. Your task is to classify each item as either "
+                "a product for sale (1) or not a product for sale (0). To make this distinction, consider the following criteria: \n"
+                "    1 Product for Sale (1): Classify as 1 if the result clearly indicates an item available for purchase, typically found  "
+                "within an online shop or marketplace.\n"
+                "    2 Not a Product for Sale (0): Classify as 0 if the result is unrelated to a direct purchase of a product. This includes items such as: \n"
+                "        - Books and Videos: These may be available for sale, but if they are about or related to the searched product rather than being the "
+                "exact product itself, classify as 0.\n"
+                "        - Advertisements: Promotional content that doesn't directly sell a product.\n"
+                "        - Companies and Services: Names and descriptions of companies or services related to the product but not the product itself.\n"
+                "        - Related Topics/Content: Any text or media that discusses or elaborates on the topic without offering a tangible product for sale.\n"
+                "Make your decision based solely on the context and details provided in the search result. Respond only with the number 1 or 0."
+            ),
+            allowed_classes=[0, 1],
+        ),
+    ]
     # # Optional: Add tern ENRICHEMENT
     # from fraudcrawler import Enrichment
 
@@ -74,7 +67,7 @@ def main():
         language=language,
         location=location,
         deepness=deepness,
-        prompts=PROMPTS,
+        prompts=prompts,
         # marketplaces=marketplaces,
         # excluded_urls=excluded_urls,
     )
@@ -92,8 +85,9 @@ def main():
     df = client.load_results()
     print(f"Number of products found: {len(df)}")
     print()
-    print(f"First {_N_HEAD} products are:")
-    print(df.head(n=_N_HEAD))
+    n_head = 10
+    print(f"First {n_head} products are:")
+    print(df.head(n=n_head))
     print()
 
 
