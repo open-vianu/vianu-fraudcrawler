@@ -166,9 +166,11 @@ class Orchestrator(ABC):
                 if url in self._collected_urls:
                     product.filtered = True
                     product.filtered_at_stage = "URL deduplication in same run"
+                    logger.warning(f"Deduplicating URL {url} as already seen")
                 elif url in self.previously_collected_urls:
                     product.filtered = True
                     product.filtered_at_stage = "URL deduplication from db"
+                    logger.warning(f"Deduplicating URL {url} as already in db")
                 else:
                     self._collected_urls.add(url)
 
