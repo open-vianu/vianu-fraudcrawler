@@ -467,6 +467,9 @@ class Orchestrator(ABC):
         n_serp_wkrs = min(self._n_serp_wkrs, n_terms_max)
         n_zyte_wkrs = min(self._n_zyte_wkrs, deepness.num_results)
         n_proc_wkrs = min(self._n_proc_wkrs, deepness.num_results)
+
+        self.previously_collected_urls = previously_collected_urls
+
         logger.debug(
             f"setting up async framework (#workers: serp={n_serp_wkrs}, zyte={n_zyte_wkrs}, proc={n_proc_wkrs})"
         )
@@ -476,8 +479,6 @@ class Orchestrator(ABC):
             n_proc_wkrs=n_proc_wkrs,
             prompts=prompts,
         )
-
-        self.previously_collected_urls = previously_collected_urls
 
         # Check if the async setup
         if self._queues is None or self._workers is None:
