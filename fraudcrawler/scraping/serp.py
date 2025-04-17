@@ -14,7 +14,7 @@ class SerpResult(BaseModel):
     """Model for a single search result from SerpApi."""
 
     url: str
-    domain: str | None
+    domain: str
     marketplace_name: str
     filtered: bool = False
     filtered_at_stage: str | None = None
@@ -176,7 +176,7 @@ class SerpApi(AsyncClient):
                 logger.warning(f'Failed to find marketplace for domain="{domain}".')
         return SerpResult(
             url=url,
-            domain=domain,
+            domain=domain if domain else "",
             marketplace_name=marketplace_name,
             filtered=filtered,
             filtered_at_stage=filtered_at_stage,

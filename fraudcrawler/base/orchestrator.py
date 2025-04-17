@@ -24,6 +24,7 @@ class ProductItem(BaseModel):
     search_term_type: str
     url: str
     marketplace_name: str
+    hostname: str
 
     # Zyte parameters
     product_name: str | None = None
@@ -38,6 +39,7 @@ class ProductItem(BaseModel):
     # Filtering parameters
     filtered: bool = False
     filtered_at_stage: str | None = None
+    is_relevant: int = -1
 
 
 class Orchestrator(ABC):
@@ -134,6 +136,7 @@ class Orchestrator(ABC):
                         search_term_type=search_term_type,
                         url=res.url,
                         marketplace_name=res.marketplace_name,
+                        hostname=res.domain,
                         filtered=res.filtered,
                         filtered_at_stage=res.filtered_at_stage,
                     )
@@ -160,13 +163,20 @@ class Orchestrator(ABC):
                 break
 
             if not product.filtered:
-                # deduplicated
                 url = product.url
-                if url not in self._collected_urls:
-                    self._collected_urls.add(url)
-                else:
+
+                if url in self._collected_urls:
+                    # deduplicate on current run
                     product.filtered = True
-                    product.filtered_at_stage = "URL collector deduplication"
+                    product.filtered_at_stage = "URL deduplication in same run"
+                    logger.warning(f"Deduplicating URL {url} as already seen")
+                elif url in self.previously_collected_urls:
+                    # deduplicate on previous runs coming from a db
+                    product.filtered = True
+                    product.filtered_at_stage = "URL deduplication from db"
+                    logger.warning(f"Deduplicating URL {url} as already in db")
+                else:
+                    self._collected_urls.add(url)
 
             await queue_out.put(product)
             queue_in.task_done()
@@ -439,6 +449,7 @@ class Orchestrator(ABC):
         prompts: List[Prompt],
         marketplaces: List[Host] | None = None,
         excluded_urls: List[Host] | None = None,
+        previously_collected_urls: List[str] = [],
     ) -> None:
         """Runs the pipeline steps: serp, enrich, zyte, process, and collect the results.
 
@@ -462,6 +473,9 @@ class Orchestrator(ABC):
         n_serp_wkrs = min(self._n_serp_wkrs, n_terms_max)
         n_zyte_wkrs = min(self._n_zyte_wkrs, deepness.num_results)
         n_proc_wkrs = min(self._n_proc_wkrs, deepness.num_results)
+
+        self.previously_collected_urls = previously_collected_urls
+
         logger.debug(
             f"setting up async framework (#workers: serp={n_serp_wkrs}, zyte={n_zyte_wkrs}, proc={n_proc_wkrs})"
         )
