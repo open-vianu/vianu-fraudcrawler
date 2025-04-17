@@ -38,6 +38,7 @@ class ProductItem(BaseModel):
     # Filtering parameters
     filtered: bool = False
     filtered_at_stage: str | None = None
+    is_relevant: int = -1
 
 
 class Orchestrator(ABC):
@@ -160,13 +161,16 @@ class Orchestrator(ABC):
                 break
 
             if not product.filtered:
-                # deduplicated
                 url = product.url
-                if url not in self._collected_urls:
-                    self._collected_urls.add(url)
-                else:
+
+                if url in self._collected_urls:
                     product.filtered = True
-                    product.filtered_at_stage = "URL collector deduplication"
+                    product.filtered_at_stage = "URL deduplication in same run"
+                elif url in self.previously_collected_urls:
+                    product.filtered = True
+                    product.filtered_at_stage = "URL deduplication from db"
+                else:
+                    self._collected_urls.add(url)
 
             await queue_out.put(product)
             queue_in.task_done()
@@ -439,6 +443,7 @@ class Orchestrator(ABC):
         prompts: List[Prompt],
         marketplaces: List[Host] | None = None,
         excluded_urls: List[Host] | None = None,
+        previously_collected_urls: List[str] = [],
     ) -> None:
         """Runs the pipeline steps: serp, enrich, zyte, process, and collect the results.
 
@@ -471,6 +476,8 @@ class Orchestrator(ABC):
             n_proc_wkrs=n_proc_wkrs,
             prompts=prompts,
         )
+
+        self.previously_collected_urls = previously_collected_urls
 
         # Check if the async setup
         if self._queues is None or self._workers is None:
