@@ -130,8 +130,15 @@ class SerpApi(AsyncClient):
         if err is not None:
             raise err
 
-        # Extract the URLs from the response
-        results = response.get("organic_results", [])
+        # Get the organic_results
+        results = response.get("organic_results")
+        if results is None:
+            logger.warning(
+                f'No organic_results key in SerpAPI results for search_string="{search_string}".'
+            )
+            return []
+
+        # Extract urls
         urls = [res.get("link") for res in results]
         logger.debug(
             f'Found {len(urls)} URLs from SerpApi search for q="{search_string}".'
