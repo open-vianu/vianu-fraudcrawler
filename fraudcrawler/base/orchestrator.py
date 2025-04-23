@@ -170,12 +170,16 @@ class Orchestrator(ABC):
                 if url in self._collected_urls_current_run:
                     # deduplicate on current run
                     product.filtered = True
-                    product.filtered_at_stage = "URL collection (current run deduplication)"
+                    product.filtered_at_stage = (
+                        "URL collection (current run deduplication)"
+                    )
                     logger.debug(f"URL {url} already collected in current run")
                 elif url in self._collected_urls_previous_runs:
                     # deduplicate on previous runs coming from a db
                     product.filtered = True
-                    product.filtered_at_stage = "URL collection (previous run deduplication)"
+                    product.filtered_at_stage = (
+                        "URL collection (previous run deduplication)"
+                    )
                     logger.debug(f"URL {url} as already collected in previous run")
                 else:
                     self._collected_urls_current_run.add(url)

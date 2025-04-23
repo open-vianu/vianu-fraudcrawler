@@ -27,7 +27,7 @@ class SerpApi(AsyncClient):
     _endpoint = "https://serpapi.com/search"
     _engine = "google"
     _default_marketplace_name = "Google"
-    _hostname_pattern = r'^(?:https?:\/\/)?([^\/:?#]+)'
+    _hostname_pattern = r"^(?:https?:\/\/)?([^\/:?#]+)"
 
     def __init__(
         self,
@@ -63,7 +63,9 @@ class SerpApi(AsyncClient):
         if hostname is None and (match := re.search(self._hostname_pattern, url)):
             hostname = match.group(1)
         if hostname is None:
-            logger.warning(f'Failed to extract domain from url="{url}"; full url is returned')
+            logger.warning(
+                f'Failed to extract domain from url="{url}"; full url is returned'
+            )
             return url
 
         # Remove www. prefix
