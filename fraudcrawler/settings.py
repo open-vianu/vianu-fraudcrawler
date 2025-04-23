@@ -8,7 +8,6 @@ ROOT_DIR = Path(__file__).parents[1]
 # Serp settings
 GOOGLE_LOCATIONS_FILENAME = ROOT_DIR / "fraudcrawler" / "base" / "google-locations.json"
 GOOGLE_LANGUAGES_FILENAME = ROOT_DIR / "fraudcrawler" / "base" / "google-languages.json"
-HOSTNAME_PATTERN = r'^(?:https?:\/\/)?([^\/:?#]+)'
 
 # Enrichment settings
 ENRICHMENT_DEFAULT_LIMIT = 10
