@@ -88,7 +88,8 @@ class Orchestrator(ABC):
             n_proc_wkrs: Number of async workers for the processor (optional).
         """
         # Setup the variables
-        self._collected_urls: Set[str] = set()
+        self._collected_urls_current_run: Set[str] = set()
+        self._collected_urls_previous_runs: Set[str] = set()
 
         # Setup the clients
         self._serpapi = SerpApi(
@@ -165,18 +166,18 @@ class Orchestrator(ABC):
             if not product.filtered:
                 url = product.url
 
-                if url in self._collected_urls:
+                if url in self._collected_urls_current_run:
                     # deduplicate on current run
                     product.filtered = True
-                    product.filtered_at_stage = "URL deduplication in same run"
-                    logger.warning(f"Deduplicating URL {url} as already seen")
-                elif url in self.previously_collected_urls:
+                    product.filtered_at_stage = "URL collection (current run deduplication)"
+                    logger.debug(f"URL {url} already collected in current run")
+                elif url in self._collected_urls_previous_runs:
                     # deduplicate on previous runs coming from a db
                     product.filtered = True
-                    product.filtered_at_stage = "URL deduplication from db"
-                    logger.warning(f"Deduplicating URL {url} as already in db")
+                    product.filtered_at_stage = "URL collection (previous run deduplication)"
+                    logger.debug(f"URL {url} as already collected in previous run")
                 else:
-                    self._collected_urls.add(url)
+                    self._collected_urls_current_run.add(url)
 
             await queue_out.put(product)
             queue_in.task_done()
@@ -449,7 +450,7 @@ class Orchestrator(ABC):
         prompts: List[Prompt],
         marketplaces: List[Host] | None = None,
         excluded_urls: List[Host] | None = None,
-        previously_collected_urls: List[str] = [],
+        previously_collected_urls: List[str] | None = None,
     ) -> None:
         """Runs the pipeline steps: serp, enrich, zyte, process, and collect the results.
 
@@ -461,11 +462,15 @@ class Orchestrator(ABC):
             prompts: The list of prompt to use for classification.
             marketplaces: The marketplaces to include in the search.
             excluded_urls: The URLs to exclude from the search.
+            previously_collected_urls: The urls that have been collected previously and are ignored.
         """
 
         # ---------------------------
         #        INITIAL SETUP
         # ---------------------------
+        if previously_collected_urls:
+            self._collected_urls_previous_runs = set(self._collected_urls_current_run)
+
         # Setup the async framework
         n_terms_max = 1 + (
             deepness.enrichment.additional_terms if deepness.enrichment else 0
@@ -473,8 +478,6 @@ class Orchestrator(ABC):
         n_serp_wkrs = min(self._n_serp_wkrs, n_terms_max)
         n_zyte_wkrs = min(self._n_zyte_wkrs, deepness.num_results)
         n_proc_wkrs = min(self._n_proc_wkrs, deepness.num_results)
-
-        self.previously_collected_urls = previously_collected_urls
 
         logger.debug(
             f"setting up async framework (#workers: serp={n_serp_wkrs}, zyte={n_zyte_wkrs}, proc={n_proc_wkrs})"
@@ -486,7 +489,7 @@ class Orchestrator(ABC):
             prompts=prompts,
         )
 
-        # Check if the async setup
+        # Check setup of async framework
         if self._queues is None or self._workers is None:
             raise ValueError(
                 "Async framework is not setup. Please call _setup_async_framework() first."
@@ -502,7 +505,7 @@ class Orchestrator(ABC):
                 "The workers of the async framework are not setup correctly."
             )
 
-        # Add the search terms to the serp_queue
+        # Add the search items to the serp_queue
         serp_queue = self._queues["serp"]
         await self._add_serp_items(
             queue=serp_queue,
