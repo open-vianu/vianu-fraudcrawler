@@ -182,7 +182,7 @@ class SerpApi(AsyncClient):
         if domain and marketplaces:
             try:
                 marketplace_name = next(
-                    mp.name for mp in marketplaces if domain in mp.domains
+                    mp.name for mp in marketplaces if domain.lower() in [d.lower() for d in mp.domains]
                 )
             except StopIteration:
                 logger.warning(f'Failed to find marketplace for domain="{domain}".')
