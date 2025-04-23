@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 
 from fraudcrawler.settings import MAX_RETRIES, RETRY_DELAY
 from fraudcrawler.base.base import Host, Language, Location, AsyncClient
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ class SerpResult(BaseModel):
     """Model for a single search result from SerpApi."""
 
     url: str
-    domain: str | None
+    domain: str
     marketplace_name: str
     filtered: bool = False
     filtered_at_stage: str | None = None
@@ -26,6 +27,7 @@ class SerpApi(AsyncClient):
     _endpoint = "https://serpapi.com/search"
     _engine = "google"
     _default_marketplace_name = "Google"
+    _hostname_pattern = r"^(?:https?:\/\/)?([^\/:?#]+)"
 
     def __init__(
         self,
@@ -45,8 +47,7 @@ class SerpApi(AsyncClient):
         self._max_retries = max_retries
         self._retry_delay = retry_delay
 
-    @staticmethod
-    def _get_domain(url: str) -> str | None:
+    def _get_domain(self, url: str) -> str:
         """Extracts the second-level domain together with the top-level domain (e.g. `google.com`).
 
         Args:
@@ -59,9 +60,13 @@ class SerpApi(AsyncClient):
 
         # Get the hostname
         hostname = urlparse(url).hostname
+        if hostname is None and (match := re.search(self._hostname_pattern, url)):
+            hostname = match.group(1)
         if hostname is None:
-            logger.warning(f'Failed to extract domain from url="{url}"')
-            return None
+            logger.warning(
+                f'Failed to extract domain from url="{url}"; full url is returned'
+            )
+            return url
 
         # Remove www. prefix
         if hostname and hostname.startswith("www."):
@@ -127,8 +132,15 @@ class SerpApi(AsyncClient):
         if err is not None:
             raise err
 
-        # Extract the URLs from the response
-        results = response.get("organic_results", [])
+        # Get the organic_results
+        results = response.get("organic_results")
+        if results is None:
+            logger.warning(
+                f'No organic_results key in SerpAPI results for search_string="{search_string}".'
+            )
+            return []
+
+        # Extract urls
         urls = [res.get("link") for res in results]
         logger.debug(
             f'Found {len(urls)} URLs from SerpApi search for q="{search_string}".'
