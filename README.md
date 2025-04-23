@@ -96,6 +96,14 @@ excluded_urls = [
 ]
 ```
 
+(Optional) Exclude previously collected urls (intends to save credits)
+```python
+previously_collected_urls = [
+    https://pharmaciedelabateliere.ch/shop/sante/douleurs-inflammations/dafalgan-cpr-eff-500-mg-16-pce/,
+    https://eiche.ch/product/schmerzmittel-52cd81d5d206a/dafalgan-brausetabletten-1336653,
+]
+```
+
 And finally run the pipeline
 ```python
 # Execute the pipeline
@@ -107,6 +115,7 @@ client.execute(
     prompts=prompts,
     # marketplaces=marketplaces,    # Uncomment this for using marketplaces
     # excluded_urls=excluded_urls   # Uncomment this for using excluded_urls
+    # previously_collected_urls=previously_collected_urls    # Uncomment this for using previously_selected_urls
 )
 ```
 This creates a file with name pattern `<search_term>_<language.code>_<location.code>_<datetime[%Y%m%d%H%M%S]>.csv` inside the folder `data/results/`.
