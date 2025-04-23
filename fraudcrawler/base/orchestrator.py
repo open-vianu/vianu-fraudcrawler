@@ -10,6 +10,7 @@ from fraudcrawler.settings import (
     DEFAULT_N_ZYTE_WKRS,
     DEFAULT_N_PROC_WKRS,
 )
+from fraudcrawler.settings import PRODUCT_ITEM_DEFAULT_IS_RELEVANT
 from fraudcrawler.base.base import Deepness, Host, Language, Location, Prompt
 from fraudcrawler import SerpApi, Enricher, ZyteApi, Processor
 
@@ -24,7 +25,7 @@ class ProductItem(BaseModel):
     search_term_type: str
     url: str
     marketplace_name: str
-    hostname: str
+    domain: str
 
     # Zyte parameters
     product_name: str | None = None
@@ -39,7 +40,7 @@ class ProductItem(BaseModel):
     # Filtering parameters
     filtered: bool = False
     filtered_at_stage: str | None = None
-    is_relevant: int = -1
+    is_relevant: int = PRODUCT_ITEM_DEFAULT_IS_RELEVANT
 
 
 class Orchestrator(ABC):
@@ -137,7 +138,7 @@ class Orchestrator(ABC):
                         search_term_type=search_term_type,
                         url=res.url,
                         marketplace_name=res.marketplace_name,
-                        hostname=res.domain,
+                        domain=res.domain,
                         filtered=res.filtered,
                         filtered_at_stage=res.filtered_at_stage,
                     )

@@ -4,8 +4,9 @@ from pydantic import BaseModel
 from typing import List
 from urllib.parse import urlparse
 
-from fraudcrawler.settings import MAX_RETRIES, RETRY_DELAY
+from fraudcrawler.settings import MAX_RETRIES, RETRY_DELAY, HOSTNAME_PATTERN
 from fraudcrawler.base.base import Host, Language, Location, AsyncClient
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ class SerpApi(AsyncClient):
         self._retry_delay = retry_delay
 
     @staticmethod
-    def _get_domain(url: str) -> str | None:
+    def _get_domain(url: str) -> str:
         """Extracts the second-level domain together with the top-level domain (e.g. `google.com`).
 
         Args:
@@ -59,9 +60,11 @@ class SerpApi(AsyncClient):
 
         # Get the hostname
         hostname = urlparse(url).hostname
+        if hostname is None and (match := re.search(HOSTNAME_PATTERN, url)):
+            hostname = match.group(1)
         if hostname is None:
-            logger.warning(f'Failed to extract domain from url="{url}"')
-            return None
+            logger.warning(f'Failed to extract domain from url="{url}"; full url is returned')
+            return url
 
         # Remove www. prefix
         if hostname and hostname.startswith("www."):
@@ -176,7 +179,7 @@ class SerpApi(AsyncClient):
                 logger.warning(f'Failed to find marketplace for domain="{domain}".')
         return SerpResult(
             url=url,
-            domain=domain if domain else "",
+            domain=domain,
             marketplace_name=marketplace_name,
             filtered=filtered,
             filtered_at_stage=filtered_at_stage,

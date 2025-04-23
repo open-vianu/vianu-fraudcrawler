@@ -8,6 +8,7 @@ ROOT_DIR = Path(__file__).parents[1]
 # Serp settings
 GOOGLE_LOCATIONS_FILENAME = ROOT_DIR / "fraudcrawler" / "base" / "google-locations.json"
 GOOGLE_LANGUAGES_FILENAME = ROOT_DIR / "fraudcrawler" / "base" / "google-languages.json"
+HOSTNAME_PATTERN = r'^(?:https?:\/\/)?([^\/:?#]+)'
 
 # Enrichment settings
 ENRICHMENT_DEFAULT_LIMIT = 10
@@ -21,6 +22,10 @@ PROCESSOR_DEFAULT_IF_MISSING = -1
 PROCESSOR_USER_PROMPT_TEMPLATE = (
     "Context: {context}\n\nProduct Details: {name}\n{description}\\n\nRelevance:"
 )
+
+# Orchestrator settings
+PRODUCT_ITEM_DEFAULT_IS_RELEVANT = -1
+
 
 # Async settings
 DEFAULT_N_SERP_WKRS = 10
